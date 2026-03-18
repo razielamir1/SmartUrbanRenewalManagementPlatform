@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import type { UserRole } from '@/lib/supabase/types'
 
 const VALID_ROLES: UserRole[] = ['admin', 'resident', 'lawyer', 'supervisor', 'developer']
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Update auth.users app_metadata so middleware can read role from JWT
-  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+  const { error: authError } = await getSupabaseAdminClient().auth.admin.updateUserById(
     userId,
     { app_metadata: { role } }
   )
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Also update public.users table for querying
-  const { error: dbError } = await supabaseAdmin
+  const { error: dbError } = await getSupabaseAdminClient()
     .from('users')
     .update({ role })
     .eq('id', userId)
