@@ -92,7 +92,8 @@ export function ContactListTable({ projectId, projectName, buildings }: Props) {
         </div>
 
         {/* Contacts table */}
-        <table className="w-full text-base">
+        <div className="overflow-x-auto">
+        <table className="w-full text-base min-w-[400px]">
           <thead>
             <tr className="border-b border-border bg-muted/10">
               <th className="text-start p-3 font-semibold text-sm">שם</th>
@@ -120,6 +121,7 @@ export function ContactListTable({ projectId, projectName, buildings }: Props) {
             ))}
           </tbody>
         </table>
+        </div>
 
         {/* "Invite all" dialog */}
         <dialog

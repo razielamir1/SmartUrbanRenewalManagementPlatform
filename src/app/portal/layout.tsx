@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
-import { SideNav } from '@/components/shared/SideNav'
+import { PortalShell } from '@/components/shared/PortalShell'
 import type { UserRole } from '@/lib/supabase/types'
 
 export default async function PortalLayout({
@@ -20,16 +20,11 @@ export default async function PortalLayout({
     .single()
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <SideNav
-        role={(profile?.role as UserRole) ?? null}
-        userName={profile?.full_name ?? null}
-      />
-      <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
-          {children}
-        </main>
-      </div>
-    </div>
+    <PortalShell
+      role={(profile?.role as UserRole) ?? null}
+      userName={profile?.full_name ?? null}
+    >
+      {children}
+    </PortalShell>
   )
 }

@@ -82,7 +82,7 @@ export function ContactReviewTable({ rawContacts, buildings, saving, savedCount,
       </div>
 
       <div className="bg-card rounded-2xl border border-border overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[540px]">
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <th className="text-start p-3 font-semibold">שם</th>

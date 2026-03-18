@@ -53,8 +53,8 @@ export default async function AdminProjectsPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          <table className="w-full text-base">
+        <div className="bg-card rounded-2xl border border-border overflow-x-auto">
+          <table className="w-full text-base min-w-[480px]">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="text-start p-4 font-semibold">שם פרויקט</th>

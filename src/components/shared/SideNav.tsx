@@ -17,6 +17,7 @@ import {
   UserCheck,
   BookUser,
   CalendarDays,
+  X,
 } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -70,9 +71,10 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
 interface SideNavProps {
   role: UserRole | null
   userName: string | null
+  onClose?: () => void
 }
 
-export function SideNav({ role, userName }: SideNavProps) {
+export function SideNav({ role, userName, onClose }: SideNavProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -87,14 +89,26 @@ export function SideNav({ role, userName }: SideNavProps) {
 
   return (
     <aside
-      className="w-64 shrink-0 bg-card border-e border-border flex flex-col min-h-screen"
+      className="w-64 shrink-0 bg-card border-e border-border flex flex-col h-full min-h-screen"
       aria-label="ניווט ראשי"
     >
       {/* Header */}
-      <div className="p-5 border-b border-border">
-        <h1 className="text-lg font-bold">פינוי-בינוי</h1>
-        {role && (
-          <p className="text-sm text-muted-foreground mt-1">{ROLE_LABELS_HE[role]}</p>
+      <div className="flex items-center justify-between gap-2 p-5 border-b border-border">
+        <div>
+          <h1 className="text-lg font-bold">פינוי-בינוי</h1>
+          {role && (
+            <p className="text-sm text-muted-foreground mt-0.5">{ROLE_LABELS_HE[role]}</p>
+          )}
+        </div>
+        {/* Close button — visible only on mobile */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="סגור תפריט"
+            className="md:hidden p-1.5 rounded-lg hover:bg-muted transition-colors"
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
         )}
       </div>
 
@@ -106,6 +120,7 @@ export function SideNav({ role, userName }: SideNavProps) {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               aria-current={isActive ? 'page' : undefined}
               className={`
                 flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors
