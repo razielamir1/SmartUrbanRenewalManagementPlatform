@@ -40,9 +40,9 @@ function parseCsv(buffer: Buffer): RawContact[] {
 }
 
 async function parsePdf(buffer: Buffer): Promise<RawContact[]> {
-  // Import from the lib path to avoid the test-fixture read issue in Next.js
+  // pdf-parse is listed in serverExternalPackages so Next.js won't bundle it
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (
+  const pdfParse = require('pdf-parse') as (
     dataBuffer: Buffer
   ) => Promise<{ text: string }>
   const { text } = await pdfParse(buffer)
