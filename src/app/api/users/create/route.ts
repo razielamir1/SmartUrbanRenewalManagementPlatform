@@ -20,16 +20,29 @@ export async function POST(request: NextRequest) {
   }
 
   const callerRole = user.app_metadata?.role as UserRole | undefined
-  if (callerRole !== 'admin') {
+  const isAdmin = callerRole === 'admin'
+  const isProjectManager = callerRole === 'project_manager'
+
+  if (!isAdmin && !isProjectManager) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const body = await request.json()
-  const { email, password, full_name, role } = body as {
+  const { email, password, full_name, role, project_id } = body as {
     email?: string
     password?: string
     full_name?: string
     role?: UserRole
+    project_id?: string
+  }
+
+  // project_manager cannot create admins or other project_managers
+  const MANAGER_ALLOWED_ROLES: UserRole[] = [
+    'resident', 'residents_representative', 'residents_lawyer', 'residents_supervisor',
+    'developer', 'developer_lawyer', 'developer_supervisor',
+  ]
+  if (isProjectManager && role && !MANAGER_ALLOWED_ROLES.includes(role)) {
+    return NextResponse.json({ error: 'Forbidden role for project manager' }, { status: 403 })
   }
 
   if (!email || !password || !role || !VALID_ROLES.includes(role)) {
@@ -72,6 +85,17 @@ export async function POST(request: NextRequest) {
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 })
+  }
+
+  // If creating a project_manager, link them to the specified project
+  if (role === 'project_manager' && project_id) {
+    const { error: projectError } = await admin
+      .from('projects')
+      .update({ project_manager_id: userId })
+      .eq('id', project_id)
+    if (projectError) {
+      return NextResponse.json({ error: projectError.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ success: true, userId, email, role })

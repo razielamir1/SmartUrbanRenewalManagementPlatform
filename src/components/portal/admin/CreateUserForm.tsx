@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,33 +19,57 @@ const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 const schema = z.object({
-  full_name: z.string().min(2, 'שם חובה'),
-  email: z.string().email('כתובת אימייל לא תקינה'),
-  password: z.string().min(8, 'סיסמה חייבת להכיל לפחות 8 תווים'),
-  role: z.enum([
+  full_name:  z.string().min(2, 'שם חובה'),
+  email:      z.string().email('כתובת אימייל לא תקינה'),
+  password:   z.string().min(8, 'סיסמה חייבת להכיל לפחות 8 תווים'),
+  role:       z.enum([
     'admin', 'project_manager', 'resident', 'residents_representative',
     'residents_lawyer', 'residents_supervisor',
     'developer', 'developer_lawyer', 'developer_supervisor',
   ] as const),
+  project_id: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
 
+interface Project { id: string; name: string }
+
 export function CreateUserForm() {
   const [serverMessage, setServerMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { role: 'resident' },
   })
 
+  const selectedRole = watch('role')
+
+  // Fetch projects for the project_manager selector
+  useEffect(() => {
+    if (selectedRole === 'project_manager' && projects.length === 0) {
+      fetch('/api/projects')
+        .then(r => r.json())
+        .then(data => setProjects(data.projects ?? []))
+        .catch(() => {})
+    }
+  }, [selectedRole, projects.length])
+
   async function onSubmit(values: FormValues) {
     setServerMessage(null)
+
+    // Validate: project_manager must have a project
+    if (values.role === 'project_manager' && !values.project_id) {
+      setServerMessage({ type: 'error', text: 'יש לבחור פרויקט עבור מנהל הפרויקט' })
+      return
+    }
+
     const res = await fetch('/api/users/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -85,54 +109,51 @@ export function CreateUserForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="full_name" className={labelClass}>שם מלא</label>
-            <input
-              id="full_name"
-              type="text"
-              autoComplete="name"
-              className={inputClass}
-              {...register('full_name')}
-            />
+            <input id="full_name" type="text" autoComplete="name" className={inputClass} {...register('full_name')} />
             {errors.full_name && <p className={errorClass}>{errors.full_name.message}</p>}
           </div>
 
           <div>
             <label htmlFor="new_email" className={labelClass}>אימייל</label>
-            <input
-              id="new_email"
-              type="email"
-              autoComplete="off"
-              className={inputClass}
-              dir="ltr"
-              {...register('email')}
-            />
+            <input id="new_email" type="email" autoComplete="off" className={inputClass} dir="ltr" {...register('email')} />
             {errors.email && <p className={errorClass}>{errors.email.message}</p>}
           </div>
 
           <div>
             <label htmlFor="new_password" className={labelClass}>סיסמה</label>
-            <input
-              id="new_password"
-              type="password"
-              autoComplete="new-password"
-              className={inputClass}
-              {...register('password')}
-            />
+            <input id="new_password" type="password" autoComplete="new-password" className={inputClass} {...register('password')} />
             {errors.password && <p className={errorClass}>{errors.password.message}</p>}
           </div>
 
           <div>
             <label htmlFor="role" className={labelClass}>תפקיד</label>
-            <select
-              id="role"
-              className={inputClass}
-              {...register('role')}
-            >
+            <select id="role" className={inputClass} {...register('role')}>
               {(Object.entries(ROLE_LABELS) as [UserRole, string][]).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
             {errors.role && <p className={errorClass}>{errors.role.message}</p>}
           </div>
+
+          {/* Project selector — only shown for project_manager */}
+          {selectedRole === 'project_manager' && (
+            <div className="sm:col-span-2">
+              <label htmlFor="project_id" className={labelClass}>
+                שיוך לפרויקט <span className="text-destructive">*</span>
+              </label>
+              <select id="project_id" className={inputClass} {...register('project_id')}>
+                <option value="">— בחר פרויקט —</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {projects.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  אין פרויקטים. <a href="/portal/admin/projects/new" className="text-primary underline">צור פרויקט תחילה</a>
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <button

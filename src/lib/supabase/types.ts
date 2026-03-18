@@ -56,6 +56,7 @@ export type Database = {
           status: ProjectStatus
           global_whatsapp_link: string | null
           description: string | null
+          project_manager_id: string | null
           created_at: string
           updated_at: string
         }
@@ -65,6 +66,7 @@ export type Database = {
           status?: ProjectStatus
           global_whatsapp_link?: string | null
           description?: string | null
+          project_manager_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -74,6 +76,7 @@ export type Database = {
           status?: ProjectStatus
           global_whatsapp_link?: string | null
           description?: string | null
+          project_manager_id?: string | null
           updated_at?: string
         }
         Relationships: []
