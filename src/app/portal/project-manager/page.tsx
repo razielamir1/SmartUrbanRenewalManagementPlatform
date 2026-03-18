@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Users, FileText, Building2, BookUser, CalendarDays } from 'lucide-react'
+import { Users, FileText, Building2, BookUser, CalendarDays, ClipboardCheck, BarChart3, Bot } from 'lucide-react'
 
 export default async function ProjectManagerDashboard() {
   const supabase = await getSupabaseServerClient()
@@ -47,7 +47,7 @@ export default async function ProjectManagerDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/portal/project-manager/team"
           className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
@@ -97,6 +97,45 @@ export default async function ProjectManagerDashboard() {
           <div>
             <p className="font-semibold text-lg">פגישות</p>
             <p className="text-sm text-muted-foreground">קביעת פגישות ויצוא ליומן</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/portal/project-manager/consents"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
+        >
+          <div className="p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.1)' }}>
+            <ClipboardCheck size={24} style={{ color: '#10b981' }} aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">מעקב חתימות</p>
+            <p className="text-sm text-muted-foreground">סטטוס הסכמת דיירים לפי בניין</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/portal/project-manager/analytics"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
+        >
+          <div className="p-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.1)' }}>
+            <BarChart3 size={24} style={{ color: '#6366f1' }} aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">אנליטיקה</p>
+            <p className="text-sm text-muted-foreground">גרפים, תובנות AI ומצב הפרויקט</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/portal/project-manager/chat"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
+        >
+          <div className="p-3 rounded-xl" style={{ background: 'rgba(245,158,11,0.1)' }}>
+            <Bot size={24} style={{ color: '#f59e0b' }} aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">עוזר AI</p>
+            <p className="text-sm text-muted-foreground">שאלות על הפרויקט ועצות להמשך</p>
           </div>
         </Link>
       </div>

@@ -17,7 +17,8 @@ export type UserRole =
   | 'developer_supervisor'    // מפקח מטעם היזם
 export type DocStatus = 'missing' | 'pending_review' | 'approved'
 export type ProjectStatus = 'pre_planning' | 'planning' | 'permits' | 'construction' | 'finishing' | 'key_delivery'
-export type ProjectType = 'tama38a' | 'tama38b' | 'pinui_binui'
+export type ProjectType = 'tama38a' | 'tama38b' | 'pinui_binui' | 'hitarot_pratiyot'
+export type ConsentStatus = 'unsigned' | 'unsigned_neutral' | 'signed' | 'objecting'
 export type DocumentType = 'id_card' | 'tabu' | 'signed_contract' | 'permit' | 'municipal_approval' | 'construction_plan' | 'other'
 export type DocumentSource = 'resident' | 'developer' | 'municipality'
 
@@ -30,6 +31,8 @@ export type Database = {
           role: UserRole
           full_name: string | null
           phone: string | null
+          project_id: string | null
+          building_id: string | null
           created_at: string
           updated_at: string
         }
@@ -38,6 +41,8 @@ export type Database = {
           role?: UserRole
           full_name?: string | null
           phone?: string | null
+          project_id?: string | null
+          building_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +51,8 @@ export type Database = {
           role?: UserRole
           full_name?: string | null
           phone?: string | null
+          project_id?: string | null
+          building_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -129,6 +136,9 @@ export type Database = {
           unit_number: string
           floor: number | null
           owner_id: string | null
+          consent_status: ConsentStatus
+          consent_notes: string | null
+          consent_updated_at: string | null
           created_at: string
           updated_at: string
         }
@@ -138,6 +148,9 @@ export type Database = {
           unit_number: string
           floor?: number | null
           owner_id?: string | null
+          consent_status?: ConsentStatus
+          consent_notes?: string | null
+          consent_updated_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -147,6 +160,9 @@ export type Database = {
           unit_number?: string
           floor?: number | null
           owner_id?: string | null
+          consent_status?: ConsentStatus
+          consent_notes?: string | null
+          consent_updated_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -434,7 +450,22 @@ export type Contact = Database['public']['Tables']['contacts']['Row']
 export type Meeting  = Database['public']['Tables']['meetings']['Row']
 
 export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  tama38a:     'תמ"א 38 א — חיזוק',
-  tama38b:     'תמ"א 38 ב — הריסה ובנייה',
-  pinui_binui: 'פינוי-בינוי',
+  tama38a:           'תמ"א 38 א — חיזוק',
+  tama38b:           'תמ"א 38 ב — הריסה ובנייה',
+  pinui_binui:       'פינוי-בינוי',
+  hitarot_pratiyot:  'היתר פרטי',
+}
+
+export const CONSENT_STATUS_LABELS: Record<ConsentStatus, string> = {
+  unsigned:         'לא חתם',
+  unsigned_neutral: 'לא חתם ולא מתנגד',
+  signed:           'חתם',
+  objecting:        'מתנגד',
+}
+
+export const CONSENT_STATUS_COLORS: Record<ConsentStatus, string> = {
+  unsigned:         '#6b7280',
+  unsigned_neutral: '#f59e0b',
+  signed:           '#22c55e',
+  objecting:        '#ef4444',
 }

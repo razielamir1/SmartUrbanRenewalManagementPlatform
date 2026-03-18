@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Menu } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Menu, Sun, Moon } from 'lucide-react'
 import { SideNav } from './SideNav'
 import type { UserRole } from '@/lib/supabase/types'
 
@@ -13,12 +13,46 @@ interface Props {
 
 export function PortalShell({ role, userName, children }: Props) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isDark, setIsDark]  = useState(false)
+  const portalRef = useRef<HTMLDivElement>(null)
   const close = () => setIsOpen(false)
 
-  return (
-    <div className="flex min-h-screen bg-background">
+  // Read preference from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('portal-theme')
+    if (stored === 'dark') setIsDark(true)
+    else if (stored === 'light') setIsDark(false)
+    else {
+      // Follow system preference if no stored value
+      setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches)
+    }
+  }, [])
 
-      {/* Backdrop — covers everything when drawer is open (mobile only) */}
+  // Apply data attribute to portal wrapper
+  useEffect(() => {
+    if (!portalRef.current) return
+    const el = portalRef.current
+    if (isDark) {
+      el.setAttribute('data-dark', '')
+      el.removeAttribute('data-light')
+    } else {
+      el.removeAttribute('data-dark')
+      el.setAttribute('data-light', '')
+    }
+  }, [isDark])
+
+  function toggleDark() {
+    setIsDark(prev => {
+      const next = !prev
+      localStorage.setItem('portal-theme', next ? 'dark' : 'light')
+      return next
+    })
+  }
+
+  return (
+    <div ref={portalRef} className="flex min-h-screen bg-background">
+
+      {/* Backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 md:hidden"
@@ -27,47 +61,44 @@ export function PortalShell({ role, userName, children }: Props) {
         />
       )}
 
-      {/*
-        Sidebar wrapper
-        Mobile:  position:fixed, right:0 (physical — RTL-safe), slides in/out with translateX
-        Desktop: position:static, part of the flex row as a normal column
-
-        IMPORTANT: use right-0 (physical) NOT end-0 (logical).
-        In RTL, inset-inline-end maps to left:0 which would pin the drawer to the LEFT side.
-      */}
+      {/* Sidebar */}
       <div
         className={[
-          // ── Mobile (default) ────────────────────────────────────────────
           'fixed inset-y-0 right-0 w-64 z-[60]',
           'transition-transform duration-300 ease-in-out overflow-y-auto',
-          // ── Desktop (md+) — reset to normal flow ────────────────────────
           'md:static md:inset-auto md:w-auto md:z-auto',
           'md:translate-x-0 md:transition-none md:overflow-visible',
-          // ── Slide state ─────────────────────────────────────────────────
-          // translate-x-full (physical +100%) pushes the drawer off the right edge
           isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
         ].join(' ')}
       >
-        <SideNav role={role} userName={userName} onClose={close} />
+        <SideNav role={role} userName={userName} onClose={close} isDark={isDark} onToggleDark={toggleDark} />
       </div>
 
-      {/* Main content area */}
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Mobile top bar — hamburger on the right (matches drawer side) */}
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 bg-card border-b border-border md:hidden">
-          {/*
-            In RTL flex layout: first child → right, last child → left.
-            We want hamburger on the RIGHT (same side as the drawer).
-          */}
+        {/* Mobile header */}
+        <header
+          className="sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 md:hidden"
+          style={{ background: '#0a1628', borderBottom: '1px solid rgba(30,58,95,0.5)' }}
+        >
           <button
             onClick={() => setIsOpen(true)}
             aria-label="פתח תפריט"
-            className="p-2 rounded-xl hover:bg-muted transition-colors"
+            className="p-2 rounded-xl transition-colors"
+            style={{ color: 'rgba(255,255,255,0.7)' }}
           >
             <Menu size={24} aria-hidden="true" />
           </button>
-          <span className="font-bold text-lg">פינוי-בינוי</span>
+          <span className="font-bold text-lg text-white">UrbanOS</span>
+          <button
+            onClick={toggleDark}
+            aria-label={isDark ? 'עבור למצב בהיר' : 'עבור למצב כהה'}
+            className="p-2 rounded-xl transition-colors"
+            style={{ color: 'rgba(255,255,255,0.7)' }}
+          >
+            {isDark ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
+          </button>
         </header>
 
         <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">

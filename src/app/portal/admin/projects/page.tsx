@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, ArrowLeft } from 'lucide-react'
 import { PROJECT_TYPE_LABELS } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -71,7 +71,12 @@ export default async function AdminProjectsPage() {
                   : null
                 return (
                   <tr key={project.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="p-4 font-medium">{project.name}</td>
+                    <td className="p-4 font-medium">
+                      <Link href={`/portal/admin/projects/${project.id}`} className="hover:text-primary transition-colors flex items-center gap-1.5 group">
+                        {project.name}
+                        <ArrowLeft size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
+                      </Link>
+                    </td>
                     <td className="p-4 text-sm text-muted-foreground">
                       {PROJECT_TYPE_LABELS[project.project_type]}
                     </td>

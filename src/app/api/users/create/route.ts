@@ -28,12 +28,13 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { email, password, full_name, role, project_id } = body as {
+  const { email, password, full_name, role, project_id, building_id } = body as {
     email?: string
     password?: string
     full_name?: string
     role?: UserRole
     project_id?: string
+    building_id?: string
   }
 
   // project_manager cannot create admins or other project_managers
@@ -81,6 +82,8 @@ export async function POST(request: NextRequest) {
     id: userId,
     role,
     full_name: full_name ?? null,
+    project_id: project_id ?? null,
+    building_id: building_id ?? null,
   })
 
   if (dbError) {

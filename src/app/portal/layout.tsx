@@ -20,11 +20,13 @@ export default async function PortalLayout({
     .single()
 
   return (
-    <PortalShell
-      role={(profile?.role as UserRole) ?? null}
-      userName={profile?.full_name ?? null}
-    >
-      {children}
-    </PortalShell>
+    <div data-theme="portal">
+      <PortalShell
+        role={(profile?.role as UserRole) ?? null}
+        userName={profile?.full_name ?? null}
+      >
+        {children}
+      </PortalShell>
+    </div>
   )
 }

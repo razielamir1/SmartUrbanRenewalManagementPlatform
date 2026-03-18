@@ -304,6 +304,14 @@ const TYPE_CARDS: {
     bullets: ['מינימום 24 יחידות דיור במתחם', '66% הסכמה · 10-12 שנים'],
     color: '#10b981',
   },
+  {
+    type: 'hitarot_pratiyot',
+    icon: '📋',
+    name: 'היתר פרטי',
+    desc: 'תהליך קבלת היתר בנייה פרטי — לבנייה חדשה, הרחבה, שיפוץ, או הוספת יחידות.',
+    bullets: ['ללא צורך בהסכמת שכנים (היתר אישי)', 'ניהול מול רשויות — 9-18 חודשים'],
+    color: '#f59e0b',
+  },
 ]
 
 function StepType({ onSelect }: { onSelect: (t: ProjectType) => void }) {
@@ -350,9 +358,10 @@ function StepType({ onSelect }: { onSelect: (t: ProjectType) => void }) {
 }
 
 const TYPE_NAME: Record<ProjectType, string> = {
-  tama38a:     'תמ"א 38 א — חיזוק',
-  tama38b:     'תמ"א 38 ב — הריסה ובנייה',
-  pinui_binui: 'פינוי-בינוי',
+  tama38a:          'תמ"א 38 א — חיזוק',
+  tama38b:          'תמ"א 38 ב — הריסה ובנייה',
+  pinui_binui:      'פינוי-בינוי',
+  hitarot_pratiyot: 'היתר פרטי',
 }
 
 function Step2({ name, description, projectType, onChange }: {
