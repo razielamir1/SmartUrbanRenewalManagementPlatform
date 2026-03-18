@@ -7,6 +7,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type UserRole =
   | 'admin'                   // מנהל מערכת
+  | 'project_manager'         // מנהל פרויקט
   | 'resident'                // דייר
   | 'residents_representative' // נציג דיירים
   | 'residents_lawyer'        // עו"ד דיירים

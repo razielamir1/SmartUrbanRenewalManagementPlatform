@@ -5,6 +5,7 @@ import type { UserProfile, UserRole } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'מנהל מערכת',
+  project_manager: 'מנהל פרויקט',
   resident: 'דייר',
   residents_representative: 'נציג דיירים',
   residents_lawyer: 'עו"ד דיירים',

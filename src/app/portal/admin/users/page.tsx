@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { UserRoleManager } from './UserRoleManager'
+import { CreateUserForm } from '@/components/portal/admin/CreateUserForm'
 
 export default async function UsersPage() {
   const supabase = await getSupabaseServerClient()
@@ -9,9 +10,13 @@ export default async function UsersPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-3xl font-bold">ניהול משתמשים</h1>
-      <UserRoleManager users={users ?? []} />
+      <CreateUserForm />
+      <section>
+        <h2 className="text-xl font-bold mb-4">משתמשים קיימים</h2>
+        <UserRoleManager users={users ?? []} />
+      </section>
     </div>
   )
 }

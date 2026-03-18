@@ -33,6 +33,11 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { href: '/portal/admin/projects', label: 'פרויקטים',           Icon: FolderOpen },
     { href: '/portal/admin/users',    label: 'ניהול משתמשים',       Icon: Users },
   ],
+  project_manager: [
+    { href: '/portal/project-manager',       label: 'לוח בקרה',    Icon: LayoutDashboard },
+    { href: '/portal/project-manager/team',  label: 'ניהול צוות',  Icon: Users },
+    { href: '/portal/project-manager/docs',  label: 'מסמכים',       Icon: FileText },
+  ],
   resident: [
     { href: '/portal/resident',           label: 'הדירה שלי',   Icon: Home },
     { href: '/portal/resident/documents', label: 'מסמכים',      Icon: FileText },

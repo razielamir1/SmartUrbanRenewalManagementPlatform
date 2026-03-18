@@ -16,6 +16,7 @@ export type Action = 'read' | 'write' | 'approve' | 'manage'
 // ─── Hebrew role labels ────────────────────────────────────────────────────
 export const ROLE_LABELS_HE: Record<UserRole, string> = {
   admin:                   'מנהל מערכת',
+  project_manager:         'מנהל פרויקט',
   resident:                'דייר',
   residents_representative: 'נציג דיירים',
   residents_lawyer:        'עו"ד דיירים',
@@ -27,6 +28,7 @@ export const ROLE_LABELS_HE: Record<UserRole, string> = {
 
 export const ROLE_LABELS_EN: Record<UserRole, string> = {
   admin:                   'System Admin',
+  project_manager:         'Project Manager',
   resident:                'Resident',
   residents_representative: "Residents' Representative",
   residents_lawyer:        "Residents' Lawyer",
@@ -50,6 +52,19 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
     whatsapp_config:     ['read', 'write', 'manage'],
   },
 
+  // Manages a single assigned project — configures team, tracks milestones, uploads docs
+  project_manager: {
+    project:             ['read', 'write'],
+    building:            ['read', 'write', 'manage'],
+    apartment:           ['read', 'write', 'manage'],
+    document_resident:   ['read'],
+    document_project:    ['read', 'write'],
+    document_approval:   ['approve'],
+    user_management:     ['read', 'write'],
+    milestone:           ['read', 'write', 'manage'],
+    whatsapp_config:     ['read', 'write'],
+  },
+
   // ── Resident side ─────────────────────────────────────────────────────────
   resident: {
     apartment:           ['read'],
@@ -58,7 +73,6 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
   },
 
   residents_representative: {
-    // Can view all residents in their building, help with docs
     project:             ['read'],
     building:            ['read'],
     apartment:           ['read'],
@@ -67,7 +81,6 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
   },
 
   residents_lawyer: {
-    // Legal review — reads everything for assigned projects
     project:             ['read'],
     building:            ['read'],
     apartment:           ['read'],
@@ -76,7 +89,6 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
   },
 
   residents_supervisor: {
-    // Oversight on behalf of residents — can approve docs
     project:             ['read'],
     building:            ['read'],
     apartment:           ['read'],
@@ -97,7 +109,6 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
   },
 
   developer_lawyer: {
-    // Legal counsel for developer — reads project docs
     project:             ['read'],
     building:            ['read'],
     document_resident:   ['read'],
@@ -105,7 +116,6 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
   },
 
   developer_supervisor: {
-    // Project supervisor on behalf of developer
     project:             ['read'],
     building:            ['read'],
     apartment:           ['read'],
@@ -128,6 +138,7 @@ export function canAccess(
 export function homeRouteForRole(role: UserRole): string {
   const map: Record<UserRole, string> = {
     admin:                   '/portal/admin',
+    project_manager:         '/portal/project-manager',
     resident:                '/portal/resident',
     residents_representative: '/portal/residents-representative',
     residents_lawyer:        '/portal/residents-lawyer',
@@ -142,6 +153,7 @@ export function homeRouteForRole(role: UserRole): string {
 // ─── Portal route prefix → required role ──────────────────────────────────
 export const PORTAL_ROLE_MAP: Record<string, UserRole> = {
   '/portal/admin':                    'admin',
+  '/portal/project-manager':          'project_manager',
   '/portal/resident':                 'resident',
   '/portal/residents-representative': 'residents_representative',
   '/portal/residents-lawyer':         'residents_lawyer',
@@ -152,23 +164,19 @@ export const PORTAL_ROLE_MAP: Record<string, UserRole> = {
 }
 
 // ─── Role grouping helpers ─────────────────────────────────────────────────
-// Roles that can see all residents' documents
 export const ROLES_WITH_FULL_DOC_ACCESS: UserRole[] = [
-  'admin', 'residents_supervisor', 'residents_representative',
+  'admin', 'project_manager', 'residents_supervisor', 'residents_representative',
   'residents_lawyer', 'developer', 'developer_supervisor', 'developer_lawyer',
 ]
 
-// Roles that can approve documents
 export const ROLES_WITH_APPROVAL: UserRole[] = [
-  'admin', 'residents_supervisor',
+  'admin', 'project_manager', 'residents_supervisor',
 ]
 
-// Roles on the "developer" side of the project
 export const DEVELOPER_SIDE_ROLES: UserRole[] = [
   'developer', 'developer_lawyer', 'developer_supervisor',
 ]
 
-// Roles on the "resident" side of the project
 export const RESIDENT_SIDE_ROLES: UserRole[] = [
   'resident', 'residents_representative', 'residents_lawyer', 'residents_supervisor',
 ]

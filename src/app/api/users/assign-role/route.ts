@@ -4,7 +4,7 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import type { UserRole } from '@/lib/supabase/types'
 
 const VALID_ROLES: UserRole[] = [
-  'admin', 'resident', 'residents_representative',
+  'admin', 'project_manager', 'resident', 'residents_representative',
   'residents_lawyer', 'residents_supervisor',
   'developer', 'developer_lawyer', 'developer_supervisor',
 ]
