@@ -3,6 +3,7 @@ import { DocumentHeatMap } from '@/components/portal/admin/DocumentHeatMap'
 import { CircularProgress } from '@/components/shared/CircularProgress'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import { PROJECT_TYPE_LABELS } from '@/lib/supabase/types'
 
 export default async function AdminDashboard() {
   const supabase = await getSupabaseServerClient()
@@ -54,6 +55,7 @@ export default async function AdminDashboard() {
                 className="block bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
               >
                 <p className="text-lg font-bold">{project.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{PROJECT_TYPE_LABELS[project.project_type]}</p>
                 <p className="text-sm text-muted-foreground mt-1 capitalize">
                   {STATUS_LABELS[project.status] ?? project.status}
                 </p>

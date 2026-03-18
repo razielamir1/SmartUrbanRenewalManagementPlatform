@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import { PROJECT_TYPE_LABELS } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<string, string> = {
   pre_planning:  'טרום תכנון',
@@ -58,6 +59,7 @@ export default async function AdminProjectsPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="text-start p-4 font-semibold">שם פרויקט</th>
+                <th className="text-start p-4 font-semibold">סוג</th>
                 <th className="text-start p-4 font-semibold">סטטוס</th>
                 <th className="text-start p-4 font-semibold">מנהל פרויקט</th>
               </tr>
@@ -70,6 +72,9 @@ export default async function AdminProjectsPage() {
                 return (
                   <tr key={project.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                     <td className="p-4 font-medium">{project.name}</td>
+                    <td className="p-4 text-sm text-muted-foreground">
+                      {PROJECT_TYPE_LABELS[project.project_type]}
+                    </td>
                     <td className="p-4 text-muted-foreground">
                       {STATUS_LABELS[project.status] ?? project.status}
                     </td>

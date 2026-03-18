@@ -17,6 +17,7 @@ export type UserRole =
   | 'developer_supervisor'    // מפקח מטעם היזם
 export type DocStatus = 'missing' | 'pending_review' | 'approved'
 export type ProjectStatus = 'pre_planning' | 'planning' | 'permits' | 'construction' | 'finishing' | 'key_delivery'
+export type ProjectType = 'tama38a' | 'tama38b' | 'pinui_binui'
 export type DocumentType = 'id_card' | 'tabu' | 'signed_contract' | 'permit' | 'municipal_approval' | 'construction_plan' | 'other'
 export type DocumentSource = 'resident' | 'developer' | 'municipality'
 
@@ -54,6 +55,7 @@ export type Database = {
           id: string
           name: string
           status: ProjectStatus
+          project_type: ProjectType
           global_whatsapp_link: string | null
           description: string | null
           project_manager_id: string | null
@@ -64,6 +66,7 @@ export type Database = {
           id?: string
           name: string
           status?: ProjectStatus
+          project_type?: ProjectType
           global_whatsapp_link?: string | null
           description?: string | null
           project_manager_id?: string | null
@@ -74,6 +77,7 @@ export type Database = {
           id?: string
           name?: string
           status?: ProjectStatus
+          project_type?: ProjectType
           global_whatsapp_link?: string | null
           description?: string | null
           project_manager_id?: string | null
@@ -394,11 +398,12 @@ export type Database = {
         Returns: UserRole
       }
       seed_project_milestones: {
-        Args: { p_project_id: string }
+        Args: { p_project_id: string; p_project_type?: ProjectType }
         Returns: undefined
       }
     }
     Enums: {
+      project_type: ProjectType
       user_role:
         | 'admin'
         | 'resident'
@@ -427,3 +432,9 @@ export type Milestone = Database['public']['Tables']['project_milestones']['Row'
 export type LawyerAssignment = Database['public']['Tables']['lawyer_project_assignments']['Row']
 export type Contact = Database['public']['Tables']['contacts']['Row']
 export type Meeting  = Database['public']['Tables']['meetings']['Row']
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  tama38a:     'תמ"א 38 א — חיזוק',
+  tama38b:     'תמ"א 38 ב — הריסה ובנייה',
+  pinui_binui: 'פינוי-בינוי',
+}

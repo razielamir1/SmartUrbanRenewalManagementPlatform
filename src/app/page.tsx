@@ -11,6 +11,7 @@ export default function LandingPage() {
       <Navbar />
       <HeroSection />
       <StatsSection />
+      <ProjectTypesSection />
       <FeaturesSection />
       <HowItWorksSection />
       <RolesSection />
@@ -33,7 +34,7 @@ function Navbar() {
           </div>
           <div className="leading-tight">
             <p className="text-base font-bold tracking-tight">UrbanOS</p>
-            <p className="text-[10px] text-blue-400/80 font-medium tracking-widest uppercase">Pinui-Binui Platform</p>
+            <p className="text-[10px] text-blue-400/80 font-medium tracking-widest uppercase">Urban Renewal Platform</p>
           </div>
         </div>
 
@@ -67,7 +68,7 @@ function HeroSection() {
           <div className="space-y-8 animate-fade-up">
             <div className="inline-flex items-center gap-2 glass-card shimmer-border rounded-full px-4 py-2 text-sm text-blue-300">
               <Zap size={14} className="text-yellow-400" />
-              <span>פלטפורמה מקצועית לניהול פינוי-בינוי</span>
+              <span>פלטפורמה מקצועית לניהול התחדשות עירונית</span>
             </div>
 
             <h1 className="text-5xl lg:text-6xl font-black leading-tight tracking-tight">
@@ -191,6 +192,97 @@ function StatsSection() {
   )
 }
 
+/* ─── Project Types ──────────────────────────────────────────── */
+function ProjectTypesSection() {
+  const types = [
+    {
+      icon: '🏗️',
+      name: 'תמ"א 38 א — חיזוק',
+      color: '#3b82f6',
+      desc: 'חיזוק מבנה קיים מפני רעידות אדמה, הוספת ממ"ד ושיפורים מוגבלים.',
+      bullets: [
+        'דיירים נשארים בבית לאורך כל הבנייה',
+        '66% הסכמה בעלי הדירות',
+        'משך פרויקט: 3-5 שנים',
+        'חוק חיזוק מבנים 2008',
+      ],
+      duration: '3-5 שנים',
+    },
+    {
+      icon: '🏢',
+      name: 'תמ"א 38 ב — הריסה ובנייה',
+      color: '#8b5cf6',
+      desc: 'הריסת הבניין הקיים ובניית בניין חדש ומודרני עם קומות נוספות ויחידות חדשות.',
+      bullets: [
+        'פינוי זמני ~3 שנים ממומן ביזם',
+        '80% הסכמה — סף גבוה יותר',
+        'משך פרויקט: 5-6 שנים',
+        'הגדלה משמעותית של מספר הדירות',
+      ],
+      duration: '5-6 שנים',
+    },
+    {
+      icon: '🏙️',
+      name: 'פינוי-בינוי',
+      color: '#10b981',
+      desc: 'התחדשות עירונית רחבת היקף של מתחם שלם — בניינים מרובים ושכונה חדשה.',
+      bullets: [
+        'מינימום 24 יחידות דיור במתחם',
+        '66% הסכמה (תיקון 2018)',
+        'הכרזת עירייה ואישור תב"ע',
+        'הגנות מיוחדות לדיירים קשישים',
+      ],
+      duration: '10-12 שנים',
+    },
+  ]
+
+  return (
+    <section id="types" className="py-24">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 glass-card rounded-full px-4 py-2 text-sm text-green-300 mb-6">
+            <Building2 size={14} className="text-green-400" /> סוגי פרויקטים
+          </div>
+          <h2 className="text-4xl font-black mb-4">3 סוגי התחדשות עירונית</h2>
+          <p className="text-white/50 text-lg max-w-2xl mx-auto">כל סוג מקבל שלבים, אבני דרך ותיאורים ייחודיים מותאמים אוטומטית בעת יצירת הפרויקט</p>
+        </div>
+        <div className="grid lg:grid-cols-3 gap-6">
+          {types.map((t, i) => (
+            <div key={i} className="glass-card rounded-2xl p-6 space-y-4 flex flex-col">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                  style={{ background: `${t.color}20`, border: `1px solid ${t.color}30` }}
+                >
+                  {t.icon}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base leading-snug">{t.name}</h3>
+                  <span
+                    className="inline-block text-xs font-semibold rounded-full px-2 py-0.5 mt-0.5"
+                    style={{ background: `${t.color}20`, color: t.color }}
+                  >
+                    {t.duration}
+                  </span>
+                </div>
+              </div>
+              <p className="text-white/55 text-sm leading-relaxed">{t.desc}</p>
+              <ul className="space-y-1.5 flex-1">
+                {t.bullets.map((b, j) => (
+                  <li key={j} className="flex items-start gap-2 text-sm text-white/60">
+                    <span className="mt-1 shrink-0 w-1.5 h-1.5 rounded-full" style={{ background: t.color }} />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /* ─── Features ───────────────────────────────────────────────── */
 function FeaturesSection() {
   const features = [
@@ -199,7 +291,7 @@ function FeaturesSection() {
     { icon: <BarChart3 size={22} />,  color: '#06b6d4', title: 'לוח בקרה מרכזי',   desc: 'מפת חום של מסמכים, התקדמות פרויקטים ואבני דרך — הכל בזמן אמת.' },
     { icon: <Shield size={22} />,     color: '#10b981', title: 'אבטחה ברמת בנק',   desc: 'Row Level Security מבטיח שכל משתמש רואה רק את הנתונים שמותר לו.' },
     { icon: <MessageCircle size={22} />, color: '#22c55e', title: 'WhatsApp Integration', desc: 'קישורי קבוצת WhatsApp ייעודיים לכל בניין ולכל פרויקט.' },
-    { icon: <CheckCircle2 size={22} />, color: '#f59e0b', title: 'אבני דרך ומעקב', desc: 'טרום תכנון → תכנון → היתרים → בנייה → גמר → מסירת מפתחות.' },
+    { icon: <CheckCircle2 size={22} />, color: '#f59e0b', title: 'אבני דרך ייחודיות לכל סוג', desc: 'תמ"א 38 א, תמ"א 38 ב ופינוי-בינוי — כל סוג מקבל שלבים ותיאורים מותאמים מראש.' },
   ]
   return (
     <section id="features" className="py-24">
@@ -231,7 +323,7 @@ function FeaturesSection() {
 /* ─── How It Works ───────────────────────────────────────────── */
 function HowItWorksSection() {
   const steps = [
-    { num: '01', icon: <Building2 size={26} />, color: '#3b82f6', title: 'מנהל מערכת יוצר פרויקט', desc: 'מגדיר את הפרויקט, הבניינים, הדירות וקישורי WhatsApp. ממנה מנהל פרויקט ייעודי.' },
+    { num: '01', icon: <Building2 size={26} />, color: '#3b82f6', title: 'מנהל מערכת יוצר פרויקט', desc: 'בוחר את סוג הפרויקט (תמ"א 38 א/ב או פינוי-בינוי), מגדיר בניינים ודירות, ממנה מנהל פרויקט.' },
     { num: '02', icon: <Users size={26} />,     color: '#8b5cf6', title: 'מנהל הפרויקט בונה צוות', desc: 'מוסיף דיירים, עורכי דין ומפקחים — כל אחד עם גישה מותאמת לתפקידו.' },
     { num: '03', icon: <FileText size={26} />,  color: '#06b6d4', title: 'כולם מעלים מסמכים',      desc: 'דיירים מעלים תעודות זהות ונסחי טאבו. היזם מעלה היתרים. כל מסמך עובר אישור דיגיטלי.' },
     { num: '04', icon: <BarChart3 size={26} />, color: '#10b981', title: 'מעקב ושקיפות מלאה',      desc: 'כולם רואים בזמן אמת איפה הפרויקט עומד — מאחוז השלמת המסמכים ועד ציר הזמן.' },
@@ -346,7 +438,7 @@ function Footer() {
             style={{ background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)' }}>
             <Building2 size={14} className="text-white" />
           </div>
-          <span className="text-sm font-bold text-white/70">UrbanOS — פלטפורמת פינוי-בינוי</span>
+          <span className="text-sm font-bold text-white/70">UrbanOS — פלטפורמת התחדשות עירונית</span>
         </div>
         <p className="text-sm text-white/30">© 2025 · Supabase + Next.js · אבטחת מידע ברמה גבוהה</p>
       </div>
