@@ -18,7 +18,7 @@ export function PortalShell({ role, userName, children }: Props) {
   return (
     <div className="flex min-h-screen bg-background">
 
-      {/* ── Mobile: backdrop covers everything including the header (z-50) ── */}
+      {/* Backdrop — covers everything when drawer is open (mobile only) */}
       {isOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 md:hidden"
@@ -27,23 +27,39 @@ export function PortalShell({ role, userName, children }: Props) {
         />
       )}
 
-      {/* ── Sidebar: drawer on mobile (z-60), static column on desktop ── */}
+      {/*
+        Sidebar wrapper
+        Mobile:  position:fixed, right:0 (physical — RTL-safe), slides in/out with translateX
+        Desktop: position:static, part of the flex row as a normal column
+
+        IMPORTANT: use right-0 (physical) NOT end-0 (logical).
+        In RTL, inset-inline-end maps to left:0 which would pin the drawer to the LEFT side.
+      */}
       <div
         className={[
-          'fixed inset-y-0 end-0 z-[60] transition-transform duration-300 ease-in-out overflow-y-auto',
-          'md:relative md:inset-auto md:z-auto md:transition-none md:translate-x-0 md:overflow-visible',
+          // ── Mobile (default) ────────────────────────────────────────────
+          'fixed inset-y-0 right-0 w-64 z-[60]',
+          'transition-transform duration-300 ease-in-out overflow-y-auto',
+          // ── Desktop (md+) — reset to normal flow ────────────────────────
+          'md:static md:inset-auto md:w-auto md:z-auto',
+          'md:translate-x-0 md:transition-none md:overflow-visible',
+          // ── Slide state ─────────────────────────────────────────────────
+          // translate-x-full (physical +100%) pushes the drawer off the right edge
           isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
         ].join(' ')}
       >
         <SideNav role={role} userName={userName} onClose={close} />
       </div>
 
-      {/* ── Main area ── */}
+      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Mobile-only top bar — hamburger on the START (right in RTL) */}
+        {/* Mobile top bar — hamburger on the right (matches drawer side) */}
         <header className="sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 bg-card border-b border-border md:hidden">
-          {/* In RTL flex: first child → right side, last child → left side */}
+          {/*
+            In RTL flex layout: first child → right, last child → left.
+            We want hamburger on the RIGHT (same side as the drawer).
+          */}
           <button
             onClick={() => setIsOpen(true)}
             aria-label="פתח תפריט"
