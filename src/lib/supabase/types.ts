@@ -5,7 +5,15 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type UserRole = 'admin' | 'resident' | 'lawyer' | 'supervisor' | 'developer'
+export type UserRole =
+  | 'admin'                   // מנהל מערכת
+  | 'resident'                // דייר
+  | 'residents_representative' // נציג דיירים
+  | 'residents_lawyer'        // עו"ד דיירים
+  | 'residents_supervisor'    // מפקח מטעם הדיירים
+  | 'developer'               // יזם
+  | 'developer_lawyer'        // עו"ד יזם
+  | 'developer_supervisor'    // מפקח מטעם היזם
 export type DocStatus = 'missing' | 'pending_review' | 'approved'
 export type ProjectStatus = 'pre_planning' | 'planning' | 'permits' | 'construction' | 'finishing' | 'key_delivery'
 export type DocumentType = 'id_card' | 'tabu' | 'signed_contract' | 'permit' | 'municipal_approval' | 'construction_plan' | 'other'
@@ -288,7 +296,15 @@ export type Database = {
       }
     }
     Enums: {
-      user_role: UserRole
+      user_role:
+        | 'admin'
+        | 'resident'
+        | 'residents_representative'
+        | 'residents_lawyer'
+        | 'residents_supervisor'
+        | 'developer'
+        | 'developer_lawyer'
+        | 'developer_supervisor'
       doc_status: DocStatus
       project_status: ProjectStatus
       document_type: DocumentType

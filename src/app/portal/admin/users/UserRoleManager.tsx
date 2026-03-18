@@ -5,10 +5,13 @@ import type { UserProfile, UserRole } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'מנהל מערכת',
-  supervisor: 'מפקח',
-  developer: 'יזם',
-  lawyer: 'עורך דין',
   resident: 'דייר',
+  residents_representative: 'נציג דיירים',
+  residents_lawyer: 'עו"ד דיירים',
+  residents_supervisor: 'מפקח מטעם הדיירים',
+  developer: 'יזם',
+  developer_lawyer: 'עו"ד יזם',
+  developer_supervisor: 'מפקח מטעם היזם',
 }
 
 export function UserRoleManager({ users }: { users: UserProfile[] }) {

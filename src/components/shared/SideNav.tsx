@@ -12,9 +12,13 @@ import {
   LogOut,
   BarChart3,
   ClipboardList,
+  Scale,
+  HardHat,
+  UserCheck,
 } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { ROLE_LABELS_HE } from '@/lib/rbac/permissions'
 import type { UserRole } from '@/lib/supabase/types'
 
 interface NavItem {
@@ -25,31 +29,33 @@ interface NavItem {
 
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   admin: [
-    { href: '/portal/admin', label: 'לוח בקרה', Icon: LayoutDashboard },
-    { href: '/portal/admin/projects', label: 'פרויקטים', Icon: FolderOpen },
-    { href: '/portal/admin/users', label: 'ניהול משתמשים', Icon: Users },
+    { href: '/portal/admin',          label: 'לוח בקרה',          Icon: LayoutDashboard },
+    { href: '/portal/admin/projects', label: 'פרויקטים',           Icon: FolderOpen },
+    { href: '/portal/admin/users',    label: 'ניהול משתמשים',       Icon: Users },
   ],
-  supervisor: [
-    { href: '/portal/supervisor', label: 'סקירה כללית', Icon: BarChart3 },
+  resident: [
+    { href: '/portal/resident',           label: 'הדירה שלי',   Icon: Home },
+    { href: '/portal/resident/documents', label: 'מסמכים',      Icon: FileText },
+  ],
+  residents_representative: [
+    { href: '/portal/residents-representative', label: 'לוח בקרה',  Icon: UserCheck },
+    { href: '/portal/resident/documents',       label: 'מסמכים',    Icon: FileText },
+  ],
+  residents_lawyer: [
+    { href: '/portal/residents-lawyer', label: 'הפרויקטים שלי', Icon: Scale },
+  ],
+  residents_supervisor: [
+    { href: '/portal/residents-supervisor', label: 'לוח בקרה',  Icon: BarChart3 },
   ],
   developer: [
     { href: '/portal/developer', label: 'הפרויקטים שלי', Icon: Building2 },
   ],
-  lawyer: [
-    { href: '/portal/lawyer', label: 'הפרויקטים שלי', Icon: ClipboardList },
+  developer_lawyer: [
+    { href: '/portal/developer-lawyer', label: 'הפרויקטים שלי', Icon: Scale },
   ],
-  resident: [
-    { href: '/portal/resident', label: 'הדירה שלי', Icon: Home },
-    { href: '/portal/resident/documents', label: 'מסמכים', Icon: FileText },
+  developer_supervisor: [
+    { href: '/portal/developer-supervisor', label: 'לוח בקרה',   Icon: HardHat },
   ],
-}
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  admin: 'מנהל מערכת',
-  supervisor: 'מפקח',
-  developer: 'יזם',
-  lawyer: 'עורך דין',
-  resident: 'דייר',
 }
 
 interface SideNavProps {
@@ -68,7 +74,7 @@ export function SideNav({ role, userName }: SideNavProps) {
     router.refresh()
   }
 
-  const items = role ? NAV_ITEMS[role] : []
+  const items = role ? (NAV_ITEMS[role] ?? []) : []
 
   return (
     <aside
@@ -79,7 +85,7 @@ export function SideNav({ role, userName }: SideNavProps) {
       <div className="p-5 border-b border-border">
         <h1 className="text-lg font-bold">פינוי-בינוי</h1>
         {role && (
-          <p className="text-sm text-muted-foreground mt-1">{ROLE_LABELS[role]}</p>
+          <p className="text-sm text-muted-foreground mt-1">{ROLE_LABELS_HE[role]}</p>
         )}
       </div>
 

@@ -13,9 +13,30 @@ export type Resource =
 
 export type Action = 'read' | 'write' | 'approve' | 'manage'
 
+// ─── Hebrew role labels ────────────────────────────────────────────────────
+export const ROLE_LABELS_HE: Record<UserRole, string> = {
+  admin:                   'מנהל מערכת',
+  resident:                'דייר',
+  residents_representative: 'נציג דיירים',
+  residents_lawyer:        'עו"ד דיירים',
+  residents_supervisor:    'מפקח מטעם הדיירים',
+  developer:               'יזם',
+  developer_lawyer:        'עו"ד יזם',
+  developer_supervisor:    'מפקח מטעם היזם',
+}
+
+export const ROLE_LABELS_EN: Record<UserRole, string> = {
+  admin:                   'System Admin',
+  resident:                'Resident',
+  residents_representative: "Residents' Representative",
+  residents_lawyer:        "Residents' Lawyer",
+  residents_supervisor:    "Residents' Supervisor",
+  developer:               'Developer',
+  developer_lawyer:        "Developer's Lawyer",
+  developer_supervisor:    "Developer's Supervisor",
+}
+
 // ─── Permission matrix ─────────────────────────────────────────────────────
-// This is the single source of truth for all access control in the app.
-// Components, Server Actions, and Route Handlers should all call canAccess().
 const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
   admin: {
     project:             ['read', 'write', 'manage'],
@@ -28,7 +49,34 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
     milestone:           ['read', 'write', 'manage'],
     whatsapp_config:     ['read', 'write', 'manage'],
   },
-  supervisor: {
+
+  // ── Resident side ─────────────────────────────────────────────────────────
+  resident: {
+    apartment:           ['read'],
+    document_resident:   ['read', 'write'],
+    document_project:    ['read'],
+  },
+
+  residents_representative: {
+    // Can view all residents in their building, help with docs
+    project:             ['read'],
+    building:            ['read'],
+    apartment:           ['read'],
+    document_resident:   ['read', 'write'],
+    document_project:    ['read'],
+  },
+
+  residents_lawyer: {
+    // Legal review — reads everything for assigned projects
+    project:             ['read'],
+    building:            ['read'],
+    apartment:           ['read'],
+    document_resident:   ['read'],
+    document_project:    ['read'],
+  },
+
+  residents_supervisor: {
+    // Oversight on behalf of residents — can approve docs
     project:             ['read'],
     building:            ['read'],
     apartment:           ['read'],
@@ -37,6 +85,8 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
     document_approval:   ['approve'],
     milestone:           ['read'],
   },
+
+  // ── Developer side ────────────────────────────────────────────────────────
   developer: {
     project:             ['read'],
     building:            ['read'],
@@ -45,17 +95,23 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
     document_project:    ['read', 'write'],
     milestone:           ['read', 'write'],
   },
-  lawyer: {
+
+  developer_lawyer: {
+    // Legal counsel for developer — reads project docs
+    project:             ['read'],
+    building:            ['read'],
+    document_resident:   ['read'],
+    document_project:    ['read'],
+  },
+
+  developer_supervisor: {
+    // Project supervisor on behalf of developer
     project:             ['read'],
     building:            ['read'],
     apartment:           ['read'],
     document_resident:   ['read'],
-    document_project:    ['read'],
-  },
-  resident: {
-    apartment:           ['read'],
-    document_resident:   ['read', 'write'],
-    document_project:    ['read'],
+    document_project:    ['read', 'write'],
+    milestone:           ['read', 'write'],
   },
 }
 
@@ -71,20 +127,48 @@ export function canAccess(
 // ─── homeRouteForRole ──────────────────────────────────────────────────────
 export function homeRouteForRole(role: UserRole): string {
   const map: Record<UserRole, string> = {
-    admin:      '/portal/admin',
-    supervisor: '/portal/supervisor',
-    developer:  '/portal/developer',
-    lawyer:     '/portal/lawyer',
-    resident:   '/portal/resident',
+    admin:                   '/portal/admin',
+    resident:                '/portal/resident',
+    residents_representative: '/portal/residents-representative',
+    residents_lawyer:        '/portal/residents-lawyer',
+    residents_supervisor:    '/portal/residents-supervisor',
+    developer:               '/portal/developer',
+    developer_lawyer:        '/portal/developer-lawyer',
+    developer_supervisor:    '/portal/developer-supervisor',
   }
   return map[role]
 }
 
-// ─── Portal route prefix → required role ───────────────────────────────────
+// ─── Portal route prefix → required role ──────────────────────────────────
 export const PORTAL_ROLE_MAP: Record<string, UserRole> = {
-  '/portal/admin':      'admin',
-  '/portal/supervisor': 'supervisor',
-  '/portal/developer':  'developer',
-  '/portal/lawyer':     'lawyer',
-  '/portal/resident':   'resident',
+  '/portal/admin':                    'admin',
+  '/portal/resident':                 'resident',
+  '/portal/residents-representative': 'residents_representative',
+  '/portal/residents-lawyer':         'residents_lawyer',
+  '/portal/residents-supervisor':     'residents_supervisor',
+  '/portal/developer':                'developer',
+  '/portal/developer-lawyer':         'developer_lawyer',
+  '/portal/developer-supervisor':     'developer_supervisor',
 }
+
+// ─── Role grouping helpers ─────────────────────────────────────────────────
+// Roles that can see all residents' documents
+export const ROLES_WITH_FULL_DOC_ACCESS: UserRole[] = [
+  'admin', 'residents_supervisor', 'residents_representative',
+  'residents_lawyer', 'developer', 'developer_supervisor', 'developer_lawyer',
+]
+
+// Roles that can approve documents
+export const ROLES_WITH_APPROVAL: UserRole[] = [
+  'admin', 'residents_supervisor',
+]
+
+// Roles on the "developer" side of the project
+export const DEVELOPER_SIDE_ROLES: UserRole[] = [
+  'developer', 'developer_lawyer', 'developer_supervisor',
+]
+
+// Roles on the "resident" side of the project
+export const RESIDENT_SIDE_ROLES: UserRole[] = [
+  'resident', 'residents_representative', 'residents_lawyer', 'residents_supervisor',
+]
