@@ -43,22 +43,9 @@ CREATE TYPE public.document_source AS ENUM (
   'municipality'
 );
 
--- ─── SECURITY DEFINER role helper ────────────────────────────
--- Must be created BEFORE any policies that reference it.
--- Avoids recursive RLS: policies call this function instead of
--- (SELECT role FROM public.users WHERE id = auth.uid())
-CREATE OR REPLACE FUNCTION public.get_my_role()
-RETURNS public.user_role
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT role FROM public.users WHERE id = auth.uid()
-$$;
-
 -- ─── users ───────────────────────────────────────────────────
 -- Extends auth.users with profile and role information.
+-- NOTE: Table must exist BEFORE get_my_role() is created.
 CREATE TABLE public.users (
   id          uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role        public.user_role NOT NULL DEFAULT 'resident',
@@ -69,6 +56,20 @@ CREATE TABLE public.users (
 );
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- ─── SECURITY DEFINER role helper ────────────────────────────
+-- Created AFTER users table so PostgreSQL can resolve the reference.
+-- Avoids recursive RLS: all policies call this function instead of
+-- (SELECT role FROM public.users WHERE id = auth.uid())
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS public.user_role
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT role FROM public.users WHERE id = auth.uid()
+$$;
 
 CREATE POLICY "users_read_own"
   ON public.users FOR SELECT
