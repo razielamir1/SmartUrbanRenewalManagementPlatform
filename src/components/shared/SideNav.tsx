@@ -1,0 +1,126 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import {
+  LayoutDashboard,
+  FolderOpen,
+  Users,
+  FileText,
+  Building2,
+  Home,
+  LogOut,
+  BarChart3,
+  ClipboardList,
+} from 'lucide-react'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import type { UserRole } from '@/lib/supabase/types'
+
+interface NavItem {
+  href: string
+  label: string
+  Icon: typeof LayoutDashboard
+}
+
+const NAV_ITEMS: Record<UserRole, NavItem[]> = {
+  admin: [
+    { href: '/portal/admin', label: 'לוח בקרה', Icon: LayoutDashboard },
+    { href: '/portal/admin/projects', label: 'פרויקטים', Icon: FolderOpen },
+    { href: '/portal/admin/users', label: 'ניהול משתמשים', Icon: Users },
+  ],
+  supervisor: [
+    { href: '/portal/supervisor', label: 'סקירה כללית', Icon: BarChart3 },
+  ],
+  developer: [
+    { href: '/portal/developer', label: 'הפרויקטים שלי', Icon: Building2 },
+  ],
+  lawyer: [
+    { href: '/portal/lawyer', label: 'הפרויקטים שלי', Icon: ClipboardList },
+  ],
+  resident: [
+    { href: '/portal/resident', label: 'הדירה שלי', Icon: Home },
+    { href: '/portal/resident/documents', label: 'מסמכים', Icon: FileText },
+  ],
+}
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'מנהל מערכת',
+  supervisor: 'מפקח',
+  developer: 'יזם',
+  lawyer: 'עורך דין',
+  resident: 'דייר',
+}
+
+interface SideNavProps {
+  role: UserRole | null
+  userName: string | null
+}
+
+export function SideNav({ role, userName }: SideNavProps) {
+  const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    const supabase = getSupabaseBrowserClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  const items = role ? NAV_ITEMS[role] : []
+
+  return (
+    <aside
+      className="w-64 shrink-0 bg-card border-e border-border flex flex-col min-h-screen"
+      aria-label="ניווט ראשי"
+    >
+      {/* Header */}
+      <div className="p-5 border-b border-border">
+        <h1 className="text-lg font-bold">פינוי-בינוי</h1>
+        {role && (
+          <p className="text-sm text-muted-foreground mt-1">{ROLE_LABELS[role]}</p>
+        )}
+      </div>
+
+      {/* Nav items */}
+      <nav className="flex-1 p-3 space-y-1" aria-label="ניווט פורטל">
+        {items.map(({ href, label, Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(href + '/')
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={isActive ? 'page' : undefined}
+              className={`
+                flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors
+                ${isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Icon size={20} aria-hidden="true" />
+              <span>{label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* User + logout */}
+      <div className="p-4 border-t border-border space-y-2">
+        {userName && (
+          <p className="text-sm font-medium truncate" title={userName}>{userName}</p>
+        )}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-base text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          aria-label="יציאה מהמערכת"
+        >
+          <LogOut size={18} aria-hidden="true" />
+          <span>יציאה</span>
+        </button>
+      </div>
+    </aside>
+  )
+}

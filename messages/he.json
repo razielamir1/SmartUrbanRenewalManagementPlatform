@@ -1,0 +1,75 @@
+{
+  "common": {
+    "loading": "טוען...",
+    "error": "שגיאה",
+    "save": "שמירה",
+    "cancel": "ביטול",
+    "back": "חזרה",
+    "next": "המשך",
+    "logout": "יציאה",
+    "upload": "העלאה",
+    "uploading": "מעלה...",
+    "submit": "שליחה",
+    "required": "שדה חובה"
+  },
+  "nav": {
+    "dashboard": "לוח בקרה",
+    "projects": "פרויקטים",
+    "users": "ניהול משתמשים",
+    "documents": "מסמכים",
+    "myApartment": "הדירה שלי",
+    "myProjects": "הפרויקטים שלי",
+    "overview": "סקירה כללית"
+  },
+  "auth": {
+    "login": "כניסה",
+    "loginTitle": "היכנסו לחשבונכם",
+    "email": "כתובת אימייל",
+    "password": "סיסמה",
+    "forgotPassword": "שכחתם סיסמה?",
+    "loginError": "פרטי ההתחברות שגויים. נסו שוב.",
+    "loggingIn": "מתחבר...",
+    "resetPassword": "איפוס סיסמה",
+    "resetSent": "נשלח לינק לאיפוס הסיסמה. בדקו את תיבת הדואר שלכם.",
+    "sendResetLink": "שלחו לינק לאיפוס"
+  },
+  "roles": {
+    "admin": "מנהל מערכת",
+    "supervisor": "מפקח",
+    "developer": "יזם",
+    "lawyer": "עורך דין",
+    "resident": "דייר"
+  },
+  "documents": {
+    "id_card": "תעודת זהות",
+    "tabu": "נסח טאבו",
+    "signed_contract": "חוזה חתום",
+    "permit": "היתר",
+    "municipal_approval": "אישור עירייה",
+    "construction_plan": "תוכנית בנייה",
+    "other": "אחר",
+    "missing": "חסר",
+    "pending_review": "ממתין לאישור",
+    "approved": "מאושר",
+    "uploadDocument": "העלאת מסמך",
+    "myDocuments": "המסמכים שלי",
+    "actionRequired": "נדרשת פעולה מצדכם"
+  },
+  "project": {
+    "new": "פרויקט חדש",
+    "name": "שם הפרויקט",
+    "description": "תיאור",
+    "status": {
+      "pre_planning": "טרום תכנון",
+      "planning": "תכנון",
+      "permits": "קבלת היתרים",
+      "construction": "בנייה",
+      "finishing": "גמר",
+      "key_delivery": "מסירת מפתחות"
+    }
+  },
+  "whatsapp": {
+    "joinBuilding": "קבוצת הווצאפ של הבניין שלי",
+    "joinProject": "קבוצת הווצאפ של הפרויקט"
+  }
+}

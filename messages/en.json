@@ -1,0 +1,75 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "logout": "Logout",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "submit": "Submit",
+    "required": "Required"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "users": "User Management",
+    "documents": "Documents",
+    "myApartment": "My Apartment",
+    "myProjects": "My Projects",
+    "overview": "Overview"
+  },
+  "auth": {
+    "login": "Login",
+    "loginTitle": "Sign in to your account",
+    "email": "Email address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "loginError": "Invalid credentials. Please try again.",
+    "loggingIn": "Signing in...",
+    "resetPassword": "Reset Password",
+    "resetSent": "A password reset link was sent. Check your email.",
+    "sendResetLink": "Send reset link"
+  },
+  "roles": {
+    "admin": "System Administrator",
+    "supervisor": "Supervisor",
+    "developer": "Developer",
+    "lawyer": "Lawyer",
+    "resident": "Resident"
+  },
+  "documents": {
+    "id_card": "ID Card",
+    "tabu": "Title Deed (Tabu)",
+    "signed_contract": "Signed Contract",
+    "permit": "Permit",
+    "municipal_approval": "Municipal Approval",
+    "construction_plan": "Construction Plan",
+    "other": "Other",
+    "missing": "Missing",
+    "pending_review": "Pending Review",
+    "approved": "Approved",
+    "uploadDocument": "Upload Document",
+    "myDocuments": "My Documents",
+    "actionRequired": "Action Required"
+  },
+  "project": {
+    "new": "New Project",
+    "name": "Project Name",
+    "description": "Description",
+    "status": {
+      "pre_planning": "Pre-Planning",
+      "planning": "Planning",
+      "permits": "Permits",
+      "construction": "Construction",
+      "finishing": "Finishing",
+      "key_delivery": "Key Delivery"
+    }
+  },
+  "whatsapp": {
+    "joinBuilding": "Join Building WhatsApp Group",
+    "joinProject": "Join Project WhatsApp Group"
+  }
+}
