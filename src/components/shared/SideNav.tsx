@@ -15,6 +15,8 @@ import {
   Scale,
   HardHat,
   UserCheck,
+  BookUser,
+  CalendarDays,
 } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -34,9 +36,11 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { href: '/portal/admin/users',    label: 'ניהול משתמשים',       Icon: Users },
   ],
   project_manager: [
-    { href: '/portal/project-manager',       label: 'לוח בקרה',    Icon: LayoutDashboard },
-    { href: '/portal/project-manager/team',  label: 'ניהול צוות',  Icon: Users },
-    { href: '/portal/project-manager/docs',  label: 'מסמכים',       Icon: FileText },
+    { href: '/portal/project-manager',            label: 'לוח בקרה',    Icon: LayoutDashboard },
+    { href: '/portal/project-manager/team',       label: 'ניהול צוות',  Icon: Users },
+    { href: '/portal/project-manager/docs',       label: 'מסמכים',       Icon: FileText },
+    { href: '/portal/project-manager/contacts',   label: 'אנשי קשר',    Icon: BookUser },
+    { href: '/portal/project-manager/meetings',   label: 'פגישות',       Icon: CalendarDays },
   ],
   resident: [
     { href: '/portal/resident',           label: 'הדירה שלי',   Icon: Home },

@@ -10,6 +10,8 @@ export type Resource =
   | 'user_management'
   | 'milestone'
   | 'whatsapp_config'
+  | 'contact'
+  | 'meeting'
 
 export type Action = 'read' | 'write' | 'approve' | 'manage'
 
@@ -50,6 +52,8 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
     user_management:     ['read', 'write', 'manage'],
     milestone:           ['read', 'write', 'manage'],
     whatsapp_config:     ['read', 'write', 'manage'],
+    contact:             ['read', 'write', 'manage'],
+    meeting:             ['read', 'write', 'manage'],
   },
 
   // Manages a single assigned project — configures team, tracks milestones, uploads docs
@@ -63,6 +67,8 @@ const PERMISSIONS: Record<UserRole, Partial<Record<Resource, Action[]>>> = {
     user_management:     ['read', 'write'],
     milestone:           ['read', 'write', 'manage'],
     whatsapp_config:     ['read', 'write'],
+    contact:             ['read', 'write', 'manage'],
+    meeting:             ['read', 'write', 'manage'],
   },
 
   // ── Resident side ─────────────────────────────────────────────────────────

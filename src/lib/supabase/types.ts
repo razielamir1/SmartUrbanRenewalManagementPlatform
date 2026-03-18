@@ -287,6 +287,105 @@ export type Database = {
           }
         ]
       }
+      contacts: {
+        Row: {
+          id: string
+          project_id: string
+          building_id: string | null
+          full_name: string
+          phone_raw: string
+          phone_wa: string
+          notes: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          building_id?: string | null
+          full_name: string
+          phone_raw: string
+          phone_wa: string
+          notes?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          building_id?: string | null
+          full_name?: string
+          phone_raw?: string
+          phone_wa?: string
+          notes?: string | null
+          created_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      meetings: {
+        Row: {
+          id: string
+          project_id: string
+          title: string
+          description: string | null
+          start_time: string
+          end_time: string
+          location: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          title: string
+          description?: string | null
+          start_time: string
+          end_time: string
+          location?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          title?: string
+          description?: string | null
+          start_time?: string
+          end_time?: string
+          location?: string | null
+          created_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -326,3 +425,5 @@ export type Apartment = Database['public']['Tables']['apartments']['Row']
 export type Document = Database['public']['Tables']['documents']['Row']
 export type Milestone = Database['public']['Tables']['project_milestones']['Row']
 export type LawyerAssignment = Database['public']['Tables']['lawyer_project_assignments']['Row']
+export type Contact = Database['public']['Tables']['contacts']['Row']
+export type Meeting  = Database['public']['Tables']['meetings']['Row']

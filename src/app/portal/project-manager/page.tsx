@@ -1,6 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Users, FileText, Building2 } from 'lucide-react'
+import { Users, FileText, Building2, BookUser, CalendarDays } from 'lucide-react'
 
 export default async function ProjectManagerDashboard() {
   const supabase = await getSupabaseServerClient()
@@ -47,7 +47,7 @@ export default async function ProjectManagerDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
         <Link
           href="/portal/project-manager/team"
           className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
@@ -71,6 +71,32 @@ export default async function ProjectManagerDashboard() {
           <div>
             <p className="font-semibold text-lg">מסמכים</p>
             <p className="text-sm text-muted-foreground">העלאה וסקירת מסמכי הפרויקט</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/portal/project-manager/contacts"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
+        >
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <BookUser size={24} className="text-primary" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">אנשי קשר</p>
+            <p className="text-sm text-muted-foreground">ייבוא, ניהול, והזמנות WhatsApp</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/portal/project-manager/meetings"
+          className="flex items-center gap-4 bg-card rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
+        >
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <CalendarDays size={24} className="text-primary" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">פגישות</p>
+            <p className="text-sm text-muted-foreground">קביעת פגישות ויצוא ליומן</p>
           </div>
         </Link>
       </div>
