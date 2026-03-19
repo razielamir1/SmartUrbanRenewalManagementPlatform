@@ -790,22 +790,24 @@ function MeetingsTab({ meetings, projectId, onCreated }: {
   onCreated: (m: Meeting) => void
 }) {
   const [showForm, setShowForm] = useState(false)
-  const [form,     setForm]     = useState({ title: '', date: '', start_time: '', end_time: '', location: '' })
+  const [form,     setForm]     = useState({ title: '', date: '', start_time: '', duration: '60', location: '' })
   const [saving,   setSaving]   = useState(false)
   const [err,      setErr]      = useState('')
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.title || !form.date || !form.start_time || !form.end_time) { setErr('יש למלא כותרת, תאריך ושעות'); return }
+    if (!form.title || !form.date || !form.start_time) { setErr('יש למלא כותרת, תאריך ושעת התחלה'); return }
     setSaving(true); setErr('')
+    const startDate = new Date(`${form.date}T${form.start_time}`)
+    const endDate = new Date(startDate.getTime() + parseInt(form.duration) * 60000)
     const res = await fetch('/api/meetings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         projectId,
         title: form.title,
-        start_time: new Date(`${form.date}T${form.start_time}`).toISOString(),
-        end_time:   new Date(`${form.date}T${form.end_time}`).toISOString(),
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
         location: form.location || undefined,
       }),
     })
@@ -813,7 +815,7 @@ function MeetingsTab({ meetings, projectId, onCreated }: {
     setSaving(false)
     if (!res.ok) { setErr(data.error ?? 'שגיאה'); return }
     onCreated(data.meeting)
-    setForm({ title: '', date: '', start_time: '', end_time: '', location: '' })
+    setForm({ title: '', date: '', start_time: '', duration: '60', location: '' })
     setShowForm(false)
   }
 
@@ -856,20 +858,41 @@ function MeetingsTab({ meetings, projectId, onCreated }: {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-muted/30 border border-border rounded-2xl p-5 space-y-3">
+        <form onSubmit={handleCreate} className="bg-muted/30 border border-border rounded-2xl p-5 space-y-4">
           <h3 className="font-semibold">פגישה חדשה</h3>
-          <input value={form.title} onChange={e => setForm(s => ({ ...s, title: e.target.value }))}
-            placeholder="כותרת הפגישה *" className={inputClass} aria-label="כותרת פגישה" />
-          <div className="grid grid-cols-3 gap-3">
-            <input type="date" value={form.date} onChange={e => setForm(s => ({ ...s, date: e.target.value }))}
-              className={inputClass} dir="ltr" aria-label="תאריך" />
-            <input type="time" value={form.start_time} onChange={e => setForm(s => ({ ...s, start_time: e.target.value }))}
-              className={inputClass} dir="ltr" aria-label="שעת התחלה" />
-            <input type="time" value={form.end_time} onChange={e => setForm(s => ({ ...s, end_time: e.target.value }))}
-              className={inputClass} dir="ltr" aria-label="שעת סיום" />
+          <div>
+            <label className="block text-sm font-medium mb-1">כותרת *</label>
+            <input value={form.title} onChange={e => setForm(s => ({ ...s, title: e.target.value }))}
+              placeholder="לדוגמא: אסיפת דיירים" className={inputClass} aria-label="כותרת פגישה" />
           </div>
-          <input value={form.location} onChange={e => setForm(s => ({ ...s, location: e.target.value }))}
-            placeholder="מיקום (אופציונלי)" className={inputClass} aria-label="מיקום" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">תאריך *</label>
+              <input type="date" value={form.date} onChange={e => setForm(s => ({ ...s, date: e.target.value }))}
+                className={inputClass} dir="ltr" aria-label="תאריך" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">שעת התחלה *</label>
+              <input type="time" value={form.start_time} onChange={e => setForm(s => ({ ...s, start_time: e.target.value }))}
+                className={inputClass} dir="ltr" aria-label="שעת התחלה" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">משך הפגישה</label>
+              <select value={form.duration} onChange={e => setForm(s => ({ ...s, duration: e.target.value }))}
+                className={inputClass} aria-label="משך פגישה">
+                <option value="30">30 דקות</option>
+                <option value="60">שעה</option>
+                <option value="90">שעה וחצי</option>
+                <option value="120">שעתיים</option>
+                <option value="180">3 שעות</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">מיקום (אופציונלי)</label>
+            <input value={form.location} onChange={e => setForm(s => ({ ...s, location: e.target.value }))}
+              placeholder="לדוגמא: משרד עו״ד, זום" className={inputClass} aria-label="מיקום" />
+          </div>
           {err && <p className="text-sm text-destructive">{err}</p>}
           <div className="flex gap-2">
             <button type="submit" disabled={saving}
