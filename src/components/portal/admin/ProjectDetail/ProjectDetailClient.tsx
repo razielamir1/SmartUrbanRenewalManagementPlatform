@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   CheckCircle2, Circle, Clock, ArrowLeft,
   Users, FileText, CalendarDays, Building2,
   MapPin, Phone, ChevronDown, ChevronUp,
   ClipboardCheck, BarChart3, Target,
-  AlertTriangle, TrendingUp,
+  AlertTriangle, TrendingUp, Bot, Send, Pencil, X, Upload, Plus,
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -33,6 +33,7 @@ interface Building { id: string; address: string; building_number: string | null
 interface Apartment {
   id: string; unit_number: string; floor: number | null
   consent_status: ConsentStatus; building_id: string; owner_id: string | null
+  consent_notes: string | null
 }
 interface Milestone {
   id: string; stage: ProjectStatus; label: string; label_en: string | null
@@ -76,7 +77,7 @@ const ROLE_LABELS_HE: Partial<Record<UserRole, string>> = {
   project_manager: 'מנהל פרויקט',
 }
 
-type TabId = 'overview' | 'consents' | 'documents' | 'meetings' | 'team'
+type TabId = 'overview' | 'consents' | 'documents' | 'meetings' | 'team' | 'ai'
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -84,18 +85,22 @@ export function ProjectDetailClient({
   project, pm, buildings, apartments, milestones,
   documents, meetings, teamMembers, contacts,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>('overview')
-  const [localMilestones, setLocalMilestones] = useState<Milestone[]>(milestones)
+  const [activeTab,         setActiveTab]         = useState<TabId>('overview')
+  const [localMilestones,   setLocalMilestones]   = useState<Milestone[]>(milestones)
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
+  const [localMeetings,     setLocalMeetings]     = useState<Meeting[]>(meetings)
+  const [localApts,         setLocalApts]         = useState<Apartment[]>(apartments)
+  const [localDocs,         setLocalDocs]         = useState<Document[]>(documents)
+  const [editingApt,        setEditingApt]        = useState<Apartment | null>(null)
 
   // Stats
-  const totalApts   = apartments.length
-  const signed      = apartments.filter(a => a.consent_status === 'signed').length
-  const objecting   = apartments.filter(a => a.consent_status === 'objecting').length
-  const signedPct   = totalApts > 0 ? Math.round((signed / totalApts) * 100) : 0
-  const completedMs = localMilestones.filter(m => m.completed_at).length
-  const msPct       = localMilestones.length > 0 ? Math.round((completedMs / localMilestones.length) * 100) : 0
-  const approvedDocs = documents.filter(d => d.status === 'approved').length
+  const totalApts    = localApts.length
+  const signed       = localApts.filter(a => a.consent_status === 'signed').length
+  const objecting    = localApts.filter(a => a.consent_status === 'objecting').length
+  const signedPct    = totalApts > 0 ? Math.round((signed / totalApts) * 100) : 0
+  const completedMs  = localMilestones.filter(m => m.completed_at).length
+  const msPct        = localMilestones.length > 0 ? Math.round((completedMs / localMilestones.length) * 100) : 0
+  const approvedDocs = localDocs.filter(d => d.status === 'approved').length
   const currentStageIdx = STATUS_ORDER.indexOf(project.status)
 
   async function toggleMilestone(milestone: Milestone) {
@@ -116,13 +121,28 @@ export function ProjectDetailClient({
   const TABS: { id: TabId; label: string; icon: React.ElementType; count?: number }[] = [
     { id: 'overview',   label: 'סקירה',    icon: BarChart3 },
     { id: 'consents',   label: 'חתימות',   icon: ClipboardCheck, count: totalApts },
-    { id: 'documents',  label: 'מסמכים',   icon: FileText,        count: documents.length },
-    { id: 'meetings',   label: 'פגישות',   icon: CalendarDays,    count: meetings.length },
+    { id: 'documents',  label: 'מסמכים',   icon: FileText,        count: localDocs.length },
+    { id: 'meetings',   label: 'פגישות',   icon: CalendarDays,    count: localMeetings.length },
     { id: 'team',       label: 'צוות',     icon: Users,           count: teamMembers.length },
+    { id: 'ai',         label: 'עוזר AI',  icon: Bot },
   ]
+
+  function handleAptSaved(id: string, updates: Partial<Apartment>) {
+    setLocalApts(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a))
+  }
 
   return (
     <div className="space-y-6 pb-16">
+
+      {/* Apartment edit modal */}
+      {editingApt && (
+        <AptEditModal
+          apt={editingApt}
+          residents={teamMembers.filter(m => m.role === 'resident')}
+          onClose={() => setEditingApt(null)}
+          onSaved={updates => { handleAptSaved(editingApt.id, updates); setEditingApt(null) }}
+        />
+      )}
 
       {/* Back link */}
       <Link
@@ -383,11 +403,12 @@ export function ProjectDetailClient({
 
         {/* Tab content */}
         <div className="p-6">
-          {activeTab === 'overview'  && <OverviewTab apartments={apartments} buildings={buildings} milestones={localMilestones} documents={documents} meetings={meetings} project={project} onToggleMilestone={toggleMilestone} />}
-          {activeTab === 'consents'  && <ConsentsTab  apartments={apartments} buildings={buildings} project={project} />}
-          {activeTab === 'documents' && <DocumentsTab documents={documents} />}
-          {activeTab === 'meetings'  && <MeetingsTab  meetings={meetings} />}
-          {activeTab === 'team'      && <TeamTab      teamMembers={teamMembers} contacts={contacts} buildings={buildings} pm={null} />}
+          {activeTab === 'overview'  && <OverviewTab apartments={localApts} buildings={buildings} milestones={localMilestones} documents={localDocs} meetings={localMeetings} project={project} onToggleMilestone={toggleMilestone} />}
+          {activeTab === 'consents'  && <ConsentsTab  apartments={localApts} buildings={buildings} project={project} onEditApt={setEditingApt} residents={teamMembers.filter(m => m.role === 'resident')} />}
+          {activeTab === 'documents' && <DocumentsTab documents={localDocs} projectId={project.id} onUploaded={doc => setLocalDocs(prev => [doc, ...prev])} />}
+          {activeTab === 'meetings'  && <MeetingsTab  meetings={localMeetings} projectId={project.id} onCreated={m => setLocalMeetings(prev => [...prev, m])} />}
+          {activeTab === 'team'      && <TeamTab      teamMembers={teamMembers} contacts={contacts} buildings={buildings} pm={pm} />}
+          {activeTab === 'ai'        && <AIChatTab    project={project} signedPct={signedPct} totalApts={totalApts} />}
         </div>
       </div>
     </div>
@@ -548,7 +569,11 @@ function OverviewTab({ apartments, buildings, milestones, documents, meetings, p
 
 // ─── Consents Tab ─────────────────────────────────────────────────────────────
 
-function ConsentsTab({ apartments, buildings, project }: { apartments: Apartment[]; buildings: Building[]; project: Project }) {
+function ConsentsTab({ apartments, buildings, project, onEditApt, residents }: {
+  apartments: Apartment[]; buildings: Building[]; project: Project
+  onEditApt: (apt: Apartment) => void
+  residents: TeamMember[]
+}) {
   const threshold = project.project_type === 'tama38b' ? 80 : project.project_type === 'hitarot_pratiyot' ? null : 66
   const total  = apartments.length
   const signed = apartments.filter(a => a.consent_status === 'signed').length
@@ -590,15 +615,28 @@ function ConsentsTab({ apartments, buildings, project }: { apartments: Apartment
               </div>
             </div>
             <div className="divide-y divide-border">
-              {bApts.map(apt => (
-                <div key={apt.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium">דירה {apt.unit_number}{apt.floor !== null ? ` (קומה ${apt.floor})` : ''}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{ background: `${CONSENT_STATUS_COLORS[apt.consent_status]}20`, color: CONSENT_STATUS_COLORS[apt.consent_status], border: `1px solid ${CONSENT_STATUS_COLORS[apt.consent_status]}40` }}>
-                    {CONSENT_STATUS_LABELS[apt.consent_status]}
-                  </span>
-                </div>
-              ))}
+              {bApts.map(apt => {
+                const owner = residents.find(r => r.id === apt.owner_id)
+                return (
+                  <div key={apt.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
+                    <div>
+                      <span className="font-medium">דירה {apt.unit_number}{apt.floor !== null ? ` (קומה ${apt.floor})` : ''}</span>
+                      {owner && <span className="ms-2 text-xs text-muted-foreground">· {owner.full_name}</span>}
+                      {apt.consent_notes && <p className="text-xs text-muted-foreground mt-0.5">{apt.consent_notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{ background: `${CONSENT_STATUS_COLORS[apt.consent_status]}20`, color: CONSENT_STATUS_COLORS[apt.consent_status], border: `1px solid ${CONSENT_STATUS_COLORS[apt.consent_status]}40` }}>
+                        {CONSENT_STATUS_LABELS[apt.consent_status]}
+                      </span>
+                      <button onClick={() => onEditApt(apt)} aria-label={`ערוך דירה ${apt.unit_number}`}
+                        className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                        <Pencil size={13} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
               {bApts.length === 0 && (
                 <p className="px-4 py-3 text-sm text-muted-foreground">אין דירות בבניין זה</p>
               )}
@@ -622,62 +660,162 @@ const DOC_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   missing:        { label: 'חסר',        color: '#ef4444' },
 }
 
-function DocumentsTab({ documents }: { documents: Document[] }) {
-  if (documents.length === 0) return <p className="text-muted-foreground">אין מסמכים עדיין</p>
+function DocumentsTab({ documents, projectId, onUploaded }: {
+  documents: Document[]
+  projectId: string
+  onUploaded: (doc: Document) => void
+}) {
+  const [showForm,  setShowForm]  = useState(false)
+  const [file,      setFile]      = useState<File | null>(null)
+  const [docType,   setDocType]   = useState('other')
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState('')
+
+  async function handleUpload() {
+    if (!file) return
+    setUploading(true)
+    setUploadErr('')
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('type', docType)
+    fd.append('source', 'admin')
+    fd.append('projectId', projectId)
+    const res = await fetch('/api/documents/upload', { method: 'POST', body: fd })
+    const data = await res.json()
+    setUploading(false)
+    if (!res.ok) { setUploadErr(data.error ?? 'שגיאה'); return }
+    onUploaded(data.document)
+    setFile(null)
+    setShowForm(false)
+  }
 
   const grouped = documents.reduce<Record<string, Document[]>>((acc, d) => {
     acc[d.status] = [...(acc[d.status] ?? []), d]
     return acc
   }, {})
 
+  const inputClass = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring'
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-3 flex-wrap">
-        {Object.entries(DOC_STATUS_LABELS).map(([status, info]) => {
-          const count = (grouped[status] ?? []).length
-          return (
-            <div key={status} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/30 text-sm">
-              <span className="w-2 h-2 rounded-full" style={{ background: info.color }} />
-              <span>{info.label}: <strong>{count}</strong></span>
-            </div>
-          )
-        })}
+      {/* Upload button */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-3 flex-wrap">
+          {Object.entries(DOC_STATUS_LABELS).map(([status, info]) => {
+            const count = (grouped[status] ?? []).length
+            return (
+              <div key={status} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/30 text-sm">
+                <span className="w-2 h-2 rounded-full" style={{ background: info.color }} />
+                <span>{info.label}: <strong>{count}</strong></span>
+              </div>
+            )
+          })}
+        </div>
+        <button
+          onClick={() => setShowForm(s => !s)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <Upload size={15} aria-hidden="true" />
+          העלה מסמך
+        </button>
       </div>
 
-      <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
-        {documents.map(doc => {
-          const statusInfo = DOC_STATUS_LABELS[doc.status]
-          return (
-            <div key={doc.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
-              <div>
-                <span className="font-medium">{DOC_TYPE_LABELS[doc.type] ?? doc.type}</span>
-                <span className="ms-2 text-xs text-muted-foreground">{doc.source}</span>
+      {/* Upload form */}
+      {showForm && (
+        <div className="bg-muted/30 border border-border rounded-2xl p-4 space-y-3">
+          <h3 className="font-semibold">העלאת מסמך חדש</h3>
+          <div>
+            <label className="block text-sm font-medium mb-1">סוג מסמך</label>
+            <select value={docType} onChange={e => setDocType(e.target.value)} className={inputClass} aria-label="סוג מסמך">
+              {Object.entries(DOC_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">קובץ (PDF / JPG / PNG)</label>
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e => setFile(e.target.files?.[0] ?? null)}
+              className="w-full text-sm" aria-label="בחר קובץ" />
+          </div>
+          {uploadErr && <p className="text-sm text-destructive">{uploadErr}</p>}
+          <div className="flex gap-2">
+            <button onClick={handleUpload} disabled={!file || uploading}
+              className="flex-1 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-60">
+              {uploading ? 'מעלה...' : 'העלה'}
+            </button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border border-border text-sm hover:bg-muted">ביטול</button>
+          </div>
+        </div>
+      )}
+
+      {documents.length === 0 && !showForm && <p className="text-muted-foreground">אין מסמכים עדיין</p>}
+
+      {documents.length > 0 && (
+        <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+          {documents.map(doc => {
+            const statusInfo = DOC_STATUS_LABELS[doc.status]
+            return (
+              <div key={doc.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
+                <div>
+                  <span className="font-medium">{DOC_TYPE_LABELS[doc.type] ?? doc.type}</span>
+                  <span className="ms-2 text-xs text-muted-foreground">{doc.source}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(doc.created_at).toLocaleDateString('he-IL')}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ background: `${statusInfo?.color ?? '#888'}20`, color: statusInfo?.color ?? '#888', border: `1px solid ${statusInfo?.color ?? '#888'}40` }}>
+                    {statusInfo?.label ?? doc.status}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">
-                  {new Date(doc.created_at).toLocaleDateString('he-IL')}
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                  style={{ background: `${statusInfo?.color ?? '#888'}20`, color: statusInfo?.color ?? '#888', border: `1px solid ${statusInfo?.color ?? '#888'}40` }}>
-                  {statusInfo?.label ?? doc.status}
-                </span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── Meetings Tab ─────────────────────────────────────────────────────────────
 
-function MeetingsTab({ meetings }: { meetings: Meeting[] }) {
-  if (meetings.length === 0) return <p className="text-muted-foreground">אין פגישות עדיין</p>
+function MeetingsTab({ meetings, projectId, onCreated }: {
+  meetings: Meeting[]
+  projectId: string
+  onCreated: (m: Meeting) => void
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [form,     setForm]     = useState({ title: '', date: '', start_time: '', end_time: '', location: '' })
+  const [saving,   setSaving]   = useState(false)
+  const [err,      setErr]      = useState('')
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.title || !form.date || !form.start_time || !form.end_time) { setErr('יש למלא כותרת, תאריך ושעות'); return }
+    setSaving(true); setErr('')
+    const res = await fetch('/api/meetings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId,
+        title: form.title,
+        start_time: new Date(`${form.date}T${form.start_time}`).toISOString(),
+        end_time:   new Date(`${form.date}T${form.end_time}`).toISOString(),
+        location: form.location || undefined,
+      }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { setErr(data.error ?? 'שגיאה'); return }
+    onCreated(data.meeting)
+    setForm({ title: '', date: '', start_time: '', end_time: '', location: '' })
+    setShowForm(false)
+  }
 
   const now = new Date()
   const upcoming = meetings.filter(m => new Date(m.start_time) >= now)
   const past     = meetings.filter(m => new Date(m.start_time) < now)
+
+  const inputClass = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring'
 
   const MeetingItem = ({ m }: { m: Meeting }) => (
     <div className="flex items-start gap-3 p-4 rounded-2xl bg-muted/30 border border-border">
@@ -703,6 +841,42 @@ function MeetingsTab({ meetings }: { meetings: Meeting[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <button onClick={() => setShowForm(s => !s)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+          <Plus size={15} aria-hidden="true" />
+          פגישה חדשה
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-muted/30 border border-border rounded-2xl p-5 space-y-3">
+          <h3 className="font-semibold">פגישה חדשה</h3>
+          <input value={form.title} onChange={e => setForm(s => ({ ...s, title: e.target.value }))}
+            placeholder="כותרת הפגישה *" className={inputClass} aria-label="כותרת פגישה" />
+          <div className="grid grid-cols-3 gap-3">
+            <input type="date" value={form.date} onChange={e => setForm(s => ({ ...s, date: e.target.value }))}
+              className={inputClass} dir="ltr" aria-label="תאריך" />
+            <input type="time" value={form.start_time} onChange={e => setForm(s => ({ ...s, start_time: e.target.value }))}
+              className={inputClass} dir="ltr" aria-label="שעת התחלה" />
+            <input type="time" value={form.end_time} onChange={e => setForm(s => ({ ...s, end_time: e.target.value }))}
+              className={inputClass} dir="ltr" aria-label="שעת סיום" />
+          </div>
+          <input value={form.location} onChange={e => setForm(s => ({ ...s, location: e.target.value }))}
+            placeholder="מיקום (אופציונלי)" className={inputClass} aria-label="מיקום" />
+          {err && <p className="text-sm text-destructive">{err}</p>}
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving}
+              className="flex-1 rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-60">
+              {saving ? 'שומר...' : 'צור פגישה'}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-xl border border-border text-sm hover:bg-muted">ביטול</button>
+          </div>
+        </form>
+      )}
+
+      {meetings.length === 0 && !showForm && <p className="text-muted-foreground">אין פגישות עדיין</p>}
+
       {upcoming.length > 0 && (
         <div>
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-2">פגישות קרובות</h3>
@@ -792,6 +966,203 @@ function MiniChart({ title, children }: { title: string; children: React.ReactNo
     <div className="bg-muted/20 rounded-2xl p-4 border border-border">
       <h3 className="text-sm font-semibold mb-2">{title}</h3>
       {children}
+    </div>
+  )
+}
+
+// ─── Apartment Edit Modal ─────────────────────────────────────────────────────
+
+function AptEditModal({ apt, residents, onClose, onSaved }: {
+  apt: Apartment
+  residents: TeamMember[]
+  onClose: () => void
+  onSaved: (updated: Partial<Apartment>) => void
+}) {
+  const [unitNumber, setUnitNumber] = useState(apt.unit_number)
+  const [notes,      setNotes]      = useState(apt.consent_notes ?? '')
+  const [ownerId,    setOwnerId]    = useState(apt.owner_id ?? '')
+  const [saving,     setSaving]     = useState(false)
+  const [err,        setErr]        = useState('')
+
+  async function handleSave() {
+    setSaving(true); setErr('')
+    const res = await fetch(`/api/apartments/${apt.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unitNumber, notes, ownerId }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { setErr(data.error ?? 'שגיאה'); return }
+    onSaved({ unit_number: unitNumber, consent_notes: notes || null, owner_id: ownerId || null })
+    onClose()
+  }
+
+  const inputClass = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-lg">עריכת דירה {apt.unit_number}</h3>
+          <button onClick={onClose} aria-label="סגור" className="p-1 rounded-lg hover:bg-muted"><X size={18} /></button>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">מספר/שם דירה</label>
+          <input value={unitNumber} onChange={e => setUnitNumber(e.target.value)} className={inputClass} aria-label="מספר דירה" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">הערות</label>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} aria-label="הערות" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">שיוך דייר</label>
+          <select value={ownerId} onChange={e => setOwnerId(e.target.value)} className={inputClass} aria-label="שיוך דייר">
+            <option value="">— ללא דייר —</option>
+            {residents.map(r => <option key={r.id} value={r.id}>{r.full_name ?? r.id}</option>)}
+          </select>
+        </div>
+
+        {err && <p className="text-sm text-destructive">{err}</p>}
+        <button onClick={handleSave} disabled={saving}
+          className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-2.5 font-semibold hover:opacity-90 disabled:opacity-60">
+          {saving ? 'שומר...' : 'שמור'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── AI Chat Tab ──────────────────────────────────────────────────────────────
+
+interface ChatMessage { role: 'user' | 'assistant'; content: string }
+
+function AIChatTab({ project, signedPct, totalApts }: {
+  project: Project
+  signedPct: number
+  totalApts: number
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input,    setInput]    = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  const SUGGESTED = ['מה המצב הנוכחי?', 'מה עלי לעשות הבא?', 'מה אחוז החתימות הנדרש?', 'כיצד להתמודד עם מתנגדים?']
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+
+  async function sendMessage(text: string) {
+    if (!text.trim() || loading) return
+    const userMsg: ChatMessage = { role: 'user', content: text }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
+    setInput('')
+    setLoading(true)
+
+    const projectContext = {
+      name: project.name,
+      type: project.project_type,
+      status: project.status,
+      signedPercent: signedPct,
+      totalApartments: totalApts,
+    }
+
+    const res = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: newMessages,
+        projectContext,
+      }),
+    })
+
+    if (!res.ok || !res.body) {
+      setMessages(m => [...m, { role: 'assistant', content: 'שגיאה בתקשורת עם ה-AI' }])
+      setLoading(false)
+      return
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let aiText = ''
+    setMessages(m => [...m, { role: 'assistant', content: '' }])
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunk = decoder.decode(value)
+      const lines = chunk.split('\n')
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6)
+          if (data === '[DONE]') break
+          aiText += data
+          setMessages(m => m.map((msg, i) => i === m.length - 1 ? { ...msg, content: aiText } : msg))
+        }
+      }
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="flex flex-col h-[520px]">
+      {/* Suggested chips */}
+      {messages.length === 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {SUGGESTED.map(q => (
+            <button key={q} onClick={() => sendMessage(q)}
+              className="px-3 py-1.5 rounded-full border border-border text-sm hover:bg-muted transition-colors">
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pe-1">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+              msg.role === 'user'
+                ? 'bg-primary text-primary-foreground rounded-ee-sm'
+                : 'bg-muted/60 border border-border rounded-es-sm'
+            }`}>
+              {msg.content || (loading && i === messages.length - 1 ? '...' : '')}
+            </div>
+          </div>
+        ))}
+        {loading && messages[messages.length - 1]?.role !== 'assistant' && (
+          <div className="flex justify-start">
+            <div className="bg-muted/60 border border-border rounded-2xl rounded-es-sm px-4 py-3 text-sm text-muted-foreground">...</div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="flex gap-2">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage(input))}
+          placeholder="שאל שאלה על הפרויקט..."
+          className="flex-1 rounded-xl border border-input bg-background px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+          disabled={loading}
+          aria-label="הודעה לעוזר AI"
+        />
+        <button
+          onClick={() => sendMessage(input)}
+          disabled={loading || !input.trim()}
+          aria-label="שלח"
+          className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+        >
+          <Send size={18} aria-hidden="true" />
+        </button>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Link2, X } from 'lucide-react'
 import type { UserRole } from '@/lib/supabase/types'
 import type { UserWithRelations } from './page'
 
@@ -17,18 +17,31 @@ const ROLE_LABELS: Record<UserRole, string> = {
   developer_supervisor:     'מפקח מטעם היזם',
 }
 
-interface Project { id: string; name: string }
+interface Project  { id: string; name: string }
+interface Building { id: string; address: string }
 
 interface Props {
   users: UserWithRelations[]
   projects: Project[]
 }
 
+interface AssignState {
+  projectId: string
+  buildingId: string
+  buildings: Building[]
+  loading: boolean
+  saving: boolean
+}
+
 export function UserRoleManager({ users, projects }: Props) {
-  const [updating, setUpdating] = useState<string | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [search, setSearch] = useState('')
+  const [updating,      setUpdating]      = useState<string | null>(null)
+  const [message,       setMessage]       = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [search,        setSearch]        = useState('')
   const [projectFilter, setProjectFilter] = useState('')
+  const [assigning,     setAssigning]     = useState<string | null>(null)   // userId being assigned
+  const [assignState,   setAssignState]   = useState<AssignState>({
+    projectId: '', buildingId: '', buildings: [], loading: false, saving: false,
+  })
 
   async function assignRole(userId: string, role: UserRole) {
     setUpdating(userId)
@@ -46,6 +59,57 @@ export function UserRoleManager({ users, projects }: Props) {
     setUpdating(null)
   }
 
+  async function openAssign(user: UserWithRelations) {
+    const state: AssignState = {
+      projectId:  user.project_id  ?? '',
+      buildingId: user.building_id ?? '',
+      buildings:  [],
+      loading:    false,
+      saving:     false,
+    }
+    setAssigning(user.id)
+    setAssignState(state)
+
+    if (user.project_id) {
+      setAssignState(s => ({ ...s, loading: true }))
+      const res = await fetch(`/api/buildings?project_id=${user.project_id}`)
+      const data = await res.json()
+      setAssignState(s => ({ ...s, buildings: data.buildings ?? [], loading: false }))
+    }
+  }
+
+  async function onAssignProjectChange(projectId: string) {
+    setAssignState(s => ({ ...s, projectId, buildingId: '', buildings: [], loading: true }))
+    if (!projectId) {
+      setAssignState(s => ({ ...s, loading: false }))
+      return
+    }
+    const res = await fetch(`/api/buildings?project_id=${projectId}`)
+    const data = await res.json()
+    setAssignState(s => ({ ...s, buildings: data.buildings ?? [], loading: false }))
+  }
+
+  async function saveAssignment() {
+    if (!assigning) return
+    setAssignState(s => ({ ...s, saving: true }))
+    const res = await fetch('/api/users/assign-project', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId:     assigning,
+        projectId:  assignState.projectId,
+        buildingId: assignState.buildingId,
+      }),
+    })
+    const data = await res.json()
+    setAssignState(s => ({ ...s, saving: false }))
+    setMessage(res.ok
+      ? { type: 'success', text: 'שיוך עודכן — רענן את הדף לצפייה' }
+      : { type: 'error', text: `שגיאה: ${data.error}` }
+    )
+    if (res.ok) setAssigning(null)
+  }
+
   const filtered = useMemo(() => {
     let result = users
     if (search.trim()) {
@@ -60,6 +124,8 @@ export function UserRoleManager({ users, projects }: Props) {
     }
     return result
   }, [users, search, projectFilter])
+
+  const selectClass = 'rounded-lg border border-input bg-background px-3 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60'
 
   return (
     <div className="space-y-4">
@@ -101,6 +167,61 @@ export function UserRoleManager({ users, projects }: Props) {
         </div>
       )}
 
+      {/* Assignment modal */}
+      {assigning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={e => { if (e.target === e.currentTarget) setAssigning(null) }}>
+          <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg">שיוך לפרויקט</h3>
+              <button onClick={() => setAssigning(null)} aria-label="סגור" className="p-1 rounded-lg hover:bg-muted">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">פרויקט</label>
+              <select
+                value={assignState.projectId}
+                onChange={e => onAssignProjectChange(e.target.value)}
+                className={`w-full ${selectClass}`}
+                aria-label="בחר פרויקט"
+              >
+                <option value="">— ללא פרויקט —</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            {assignState.projectId && (
+              <div>
+                <label className="block text-sm font-medium mb-1">בניין (אופציונלי)</label>
+                {assignState.loading
+                  ? <p className="text-sm text-muted-foreground">טוען בניינים...</p>
+                  : (
+                    <select
+                      value={assignState.buildingId}
+                      onChange={e => setAssignState(s => ({ ...s, buildingId: e.target.value }))}
+                      className={`w-full ${selectClass}`}
+                      aria-label="בחר בניין"
+                    >
+                      <option value="">— ללא בניין —</option>
+                      {assignState.buildings.map(b => <option key={b.id} value={b.id}>{b.address}</option>)}
+                    </select>
+                  )
+                }
+              </div>
+            )}
+
+            <button
+              onClick={saveAssignment}
+              disabled={assignState.saving}
+              className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-2.5 font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
+            >
+              {assignState.saving ? 'שומר...' : 'שמור שיוך'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-base">
@@ -111,12 +232,13 @@ export function UserRoleManager({ users, projects }: Props) {
                 <th className="text-start p-4 font-semibold whitespace-nowrap">בניין</th>
                 <th className="text-start p-4 font-semibold whitespace-nowrap">תפקיד נוכחי</th>
                 <th className="text-start p-4 font-semibold whitespace-nowrap">שינוי תפקיד</th>
+                <th className="text-start p-4 font-semibold whitespace-nowrap">שיוך</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     לא נמצאו משתמשים
                   </td>
                 </tr>
@@ -124,8 +246,8 @@ export function UserRoleManager({ users, projects }: Props) {
                 filtered.map(user => (
                   <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                     <td className="p-4 font-medium">{user.full_name ?? '—'}</td>
-                    <td className="p-4 text-muted-foreground">{user.project?.name ?? '—'}</td>
-                    <td className="p-4 text-muted-foreground">{user.building?.address ?? '—'}</td>
+                    <td className="p-4 text-muted-foreground text-sm">{user.project?.name ?? <span className="italic">לא משויך</span>}</td>
+                    <td className="p-4 text-muted-foreground text-sm">{user.building?.address ?? '—'}</td>
                     <td className="p-4">
                       <span className="px-2 py-0.5 rounded-full text-sm bg-muted">
                         {ROLE_LABELS[user.role as UserRole] ?? user.role}
@@ -137,7 +259,7 @@ export function UserRoleManager({ users, projects }: Props) {
                         disabled={updating === user.id}
                         onChange={e => assignRole(user.id, e.target.value as UserRole)}
                         aria-label={`תפקיד של ${user.full_name}`}
-                        className="rounded-lg border border-input bg-background px-3 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+                        className={selectClass}
                       >
                         {(Object.entries(ROLE_LABELS) as [UserRole, string][]).map(([value, label]) => (
                           <option key={value} value={value}>{label}</option>
@@ -146,6 +268,16 @@ export function UserRoleManager({ users, projects }: Props) {
                       {updating === user.id && (
                         <span className="ms-2 text-sm text-muted-foreground">מעדכן...</span>
                       )}
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => openAssign(user)}
+                        aria-label={`שייך ${user.full_name} לפרויקט`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm transition-colors"
+                      >
+                        <Link2 size={14} aria-hidden="true" />
+                        שייך
+                      </button>
                     </td>
                   </tr>
                 ))

@@ -39,7 +39,7 @@ export default async function ProjectDetailPage({
   const { data: apartments } = buildingIds.length > 0
     ? await admin
         .from('apartments')
-        .select('id, unit_number, floor, consent_status, building_id, owner_id')
+        .select('id, unit_number, floor, consent_status, building_id, owner_id, consent_notes')
         .in('building_id', buildingIds)
     : { data: [] }
 
