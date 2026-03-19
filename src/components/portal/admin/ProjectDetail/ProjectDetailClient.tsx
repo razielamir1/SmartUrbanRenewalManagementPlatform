@@ -903,18 +903,31 @@ function TeamTab({ teamMembers, contacts: initialContacts, buildings, pm, projec
   projectId: string
 }) {
   const buildingMap = Object.fromEntries(buildings.map(b => [b.id, b.address]))
-  const [contacts,       setContacts]       = useState<Contact[]>(initialContacts)
-  const [importText,     setImportText]     = useState('')
-  const [showImport,     setShowImport]     = useState(false)
-  const [parsed,         setParsed]         = useState<{ full_name: string; phone_raw: string; phone_wa: string }[]>([])
-  const [saving,         setSaving]         = useState(false)
-  const [waGroupLink,    setWaGroupLink]    = useState('')
-  const [waMsg,          setWaMsg]          = useState('שלום, אתם מוזמנים להצטרף למערכת UrbanOS לניהול הפרויקט שלנו.')
+  const [contacts,    setContacts]    = useState<Contact[]>(initialContacts)
+  const [showImport,  setShowImport]  = useState(false)
+  const [importText,  setImportText]  = useState('')
+  const [parsed,      setParsed]      = useState<{ full_name: string; phone_raw: string; phone_wa: string; building: string | null }[]>([])
+  const [parsing,     setParsing]     = useState(false)
+  const [saving,      setSaving]      = useState(false)
+  const [importErr,   setImportErr]   = useState('')
+  const [waGroupLink, setWaGroupLink] = useState('')
+  const [waMsg,       setWaMsg]       = useState('שלום, אתם מוזמנים להצטרף למערכת UrbanOS לניהול הפרויקט שלנו.')
+
+  async function handleFileUpload(file: File) {
+    setParsing(true); setImportErr(''); setParsed([])
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/contacts/parse', { method: 'POST', body: fd })
+    const data = await res.json()
+    setParsing(false)
+    if (!res.ok) { setImportErr(data.error ?? 'שגיאה בניתוח הקובץ'); return }
+    setParsed(data.contacts ?? [])
+  }
 
   function parseText() {
     const IL_PHONE_RE = /0[5-9]\d[-\s]?\d{3}[-\s]?\d{4}/g
     const lines = importText.split(/\r?\n/)
-    const result: { full_name: string; phone_raw: string; phone_wa: string }[] = []
+    const result: { full_name: string; phone_raw: string; phone_wa: string; building: string | null }[] = []
     for (const line of lines) {
       const t = line.trim(); if (!t) continue
       const phones = t.match(IL_PHONE_RE); if (!phones) continue
@@ -922,7 +935,7 @@ function TeamTab({ teamMembers, contacts: initialContacts, buildings, pm, projec
       const name = t.slice(0, firstIdx).replace(/^[\d\s.,;:\-–—|/\\()[\]{}]+/, '').trim()
       for (const phone of phones) {
         const digits = phone.replace(/[-\s]/g, '')
-        result.push({ full_name: name || 'לא ידוע', phone_raw: phone, phone_wa: '972' + digits.slice(1) })
+        result.push({ full_name: name || 'לא ידוע', phone_raw: phone, phone_wa: '972' + digits.slice(1), building: null })
       }
     }
     setParsed(result)
@@ -937,10 +950,7 @@ function TeamTab({ teamMembers, contacts: initialContacts, buildings, pm, projec
       body: JSON.stringify({ projectId, contacts: parsed.map(c => ({ ...c, building_id: null })) }),
     })
     if (res.ok) {
-      setContacts(prev => [
-        ...prev,
-        ...parsed.map((c, i) => ({ id: `new-${i}-${Date.now()}`, full_name: c.full_name, phone_raw: c.phone_raw })),
-      ])
+      setContacts(prev => [...prev, ...parsed.map((c, i) => ({ id: `new-${i}-${Date.now()}`, full_name: c.full_name, phone_raw: c.phone_raw }))])
       setImportText(''); setParsed([]); setShowImport(false)
     }
     setSaving(false)
@@ -1007,30 +1017,53 @@ function TeamTab({ teamMembers, contacts: initialContacts, buildings, pm, projec
 
         {/* Import form */}
         {showImport && (
-          <div className="mb-4 p-4 rounded-2xl border border-border bg-muted/20 space-y-3">
-            <p className="text-sm font-semibold">הכנס רשימת שמות ומספרי טלפון (שם + מספר בכל שורה):</p>
-            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={6}
+          <div className="mb-4 p-4 rounded-2xl border border-border bg-muted/20 space-y-4">
+            {/* File upload */}
+            <div>
+              <p className="text-sm font-semibold mb-2">📎 העלאת קובץ (CSV / Word / PDF) — ה-AI יקרא ויחלץ אוטומטית:</p>
+              <label className="flex items-center justify-center gap-2 w-full py-6 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-muted/30 cursor-pointer transition-colors text-sm text-muted-foreground">
+                <Upload size={18} aria-hidden="true" />
+                {parsing ? 'מנתח קובץ...' : 'לחץ לבחירת קובץ'}
+                <input type="file" accept=".csv,.doc,.docx,.pdf,.txt" className="sr-only"
+                  disabled={parsing}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }}
+                  aria-label="העלה קובץ אנשי קשר" />
+              </label>
+            </div>
+
+            {/* OR divider + manual text */}
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex-1 h-px bg-border" />
+              <span>או הכנס ידנית</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4}
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder={'ישראל ישראלי 050-1234567\nרחל כהן 052-9876543'}
-              aria-label="רשימת אנשי קשר" />
+              aria-label="רשימת אנשי קשר ידנית" />
             <div className="flex gap-2">
-              <button onClick={parseText} className="flex-1 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">נתח רשימה</button>
-              <button onClick={() => { setShowImport(false); setParsed([]) }} className="px-3 py-2 rounded-lg text-sm hover:bg-muted">ביטול</button>
+              <button onClick={parseText} className="flex-1 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">נתח טקסט</button>
+              <button onClick={() => { setShowImport(false); setParsed([]); setImportErr('') }} className="px-3 py-2 rounded-lg text-sm hover:bg-muted">ביטול</button>
             </div>
+
+            {importErr && <p className="text-sm text-destructive">{importErr}</p>}
+
+            {/* Preview */}
             {parsed.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">נמצאו {parsed.length} אנשי קשר:</p>
-                <div className="max-h-40 overflow-y-auto divide-y divide-border border border-border rounded-lg">
+                <p className="text-sm font-semibold text-green-600">✓ נמצאו {parsed.length} אנשי קשר:</p>
+                <div className="max-h-48 overflow-y-auto divide-y divide-border border border-border rounded-lg">
                   {parsed.map((c, i) => (
-                    <div key={i} className="px-3 py-2 flex justify-between text-sm">
-                      <span>{c.full_name}</span>
+                    <div key={i} className="px-3 py-2 grid grid-cols-3 gap-2 text-sm">
+                      <span className="font-medium truncate">{c.full_name}</span>
                       <span dir="ltr" className="text-muted-foreground">{c.phone_raw}</span>
+                      <span className="text-muted-foreground text-xs truncate">{c.building ?? '—'}</span>
                     </div>
                   ))}
                 </div>
                 <button onClick={saveContacts} disabled={saving}
                   className="w-full rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-60">
-                  {saving ? 'שומר...' : `שמור ${parsed.length} אנשי קשר`}
+                  {saving ? 'שומר...' : `💾 שמור ${parsed.length} אנשי קשר`}
                 </button>
               </div>
             )}

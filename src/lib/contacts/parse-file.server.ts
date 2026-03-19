@@ -2,49 +2,43 @@
 // Never import this file in Client Components
 import { extractPhonePairs, type RawContact } from './parse-phones'
 
-export async function parseContactFile(
+/** Extract plain text from an uploaded file buffer */
+export async function extractTextFromFile(
   buffer: Buffer,
   mimeType: string
-): Promise<RawContact[]> {
+): Promise<string> {
   if (
     mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
     mimeType === 'application/msword'
   ) {
-    return parseDocx(buffer)
+    const mammoth = await import('mammoth')
+    const { value } = await mammoth.extractRawText({ buffer })
+    return value
   }
 
   if (mimeType === 'text/csv' || mimeType === 'application/csv') {
-    return parseCsv(buffer)
+    const Papa = require('papaparse') as typeof import('papaparse')
+    const text = buffer.toString('utf-8')
+    const { data } = Papa.parse<string[]>(text, { skipEmptyLines: true })
+    return (data as string[][]).map(row => row.join(' ')).join('\n')
   }
 
   if (mimeType === 'application/pdf') {
-    return parsePdf(buffer)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse') as (b: Buffer) => Promise<{ text: string }>
+    const { text } = await pdfParse(buffer)
+    return text
   }
 
-  throw new Error(`סוג קובץ לא נתמך: ${mimeType}`)
+  // Plain text / TXT
+  return buffer.toString('utf-8')
 }
 
-async function parseDocx(buffer: Buffer): Promise<RawContact[]> {
-  const mammoth = await import('mammoth')
-  const { value: text } = await mammoth.extractRawText({ buffer })
-  return extractPhonePairs(text)
-}
-
-function parseCsv(buffer: Buffer): RawContact[] {
-  const Papa = require('papaparse') as typeof import('papaparse')
-  const text = buffer.toString('utf-8')
-  const { data } = Papa.parse<string[]>(text, { skipEmptyLines: true })
-  // Join all cells of each row as a single line for phone extraction
-  const allText = (data as string[][]).map(row => row.join(' ')).join('\n')
-  return extractPhonePairs(allText)
-}
-
-async function parsePdf(buffer: Buffer): Promise<RawContact[]> {
-  // pdf-parse is listed in serverExternalPackages so Next.js won't bundle it
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require('pdf-parse') as (
-    dataBuffer: Buffer
-  ) => Promise<{ text: string }>
-  const { text } = await pdfParse(buffer)
+/** Legacy regex-based parser (kept for fallback) */
+export async function parseContactFile(
+  buffer: Buffer,
+  mimeType: string
+): Promise<RawContact[]> {
+  const text = await extractTextFromFile(buffer, mimeType)
   return extractPhonePairs(text)
 }
