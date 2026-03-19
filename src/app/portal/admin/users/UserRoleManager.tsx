@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, Link2, X, Pencil, Eye, EyeOff } from 'lucide-react'
 import type { UserRole } from '@/lib/supabase/types'
 import type { UserWithRelations } from './page'
@@ -41,12 +41,12 @@ function UserEditModal({ user, onClose, onSaved }: {
   const [err,         setErr]         = useState('')
 
   // Load email from auth on mount
-  useState(() => {
+  useEffect(() => {
     fetch(`/api/users/${user.id}`)
       .then(r => r.json())
       .then(d => { setEmail(d.email ?? ''); setLoading(false) })
       .catch(() => setLoading(false))
-  })
+  }, [user.id])
 
   async function handleSave() {
     setSaving(true); setErr('')

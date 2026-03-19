@@ -138,7 +138,7 @@ export function ProjectDetailClient({
       {editingApt && (
         <AptEditModal
           apt={editingApt}
-          residents={teamMembers.filter(m => m.role === 'resident')}
+          residents={teamMembers}
           onClose={() => setEditingApt(null)}
           onSaved={updates => { handleAptSaved(editingApt.id, updates) }}
         />
@@ -1165,7 +1165,7 @@ function AptEditModal({ apt, residents, onClose, onSaved }: {
           <label className="block text-sm font-medium mb-1">שיוך דייר</label>
           <select value={ownerId} onChange={e => setOwnerId(e.target.value)} className={inputClass} aria-label="שיוך דייר">
             <option value="">— ללא דייר —</option>
-            {residents.map(r => <option key={r.id} value={r.id}>{r.full_name ?? r.id}</option>)}
+            {residents.map(r => <option key={r.id} value={r.id}>{r.full_name ?? r.id} ({ROLE_LABELS_HE[r.role] ?? r.role})</option>)}
           </select>
         </div>
 
