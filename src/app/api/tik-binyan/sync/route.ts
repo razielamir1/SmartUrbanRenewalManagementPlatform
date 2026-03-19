@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = `אתה מנתח מערכות תיקי בניין עירוניים בישראל.
 מה-HTML הבא של אתר העירייה, חלץ את כל המידע הרלוונטי על בקשת ההיתר/תיק הבניין.

@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 - tips: 3 המלצות מעשיות לצעדים הבאים`
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const result = await model.generateContent(prompt)
   let text = result.response.text().trim()
