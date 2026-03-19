@@ -406,6 +406,66 @@ export type Database = {
           }
         ]
       }
+      tik_binyan: {
+        Row: {
+          id: string
+          project_id: string
+          municipality: string
+          municipality_url: string | null
+          search_type: string
+          file_number: string | null
+          request_number: string | null
+          address: string | null
+          gush: string | null
+          helka: string | null
+          parsed_data: Json
+          sync_status: string
+          sync_error: string | null
+          last_sync_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          municipality: string
+          municipality_url?: string | null
+          search_type?: string
+          file_number?: string | null
+          request_number?: string | null
+          address?: string | null
+          gush?: string | null
+          helka?: string | null
+          parsed_data?: Json
+          sync_status?: string
+          sync_error?: string | null
+          last_sync_at?: string | null
+        }
+        Update: {
+          project_id?: string
+          municipality?: string
+          municipality_url?: string | null
+          search_type?: string
+          file_number?: string | null
+          request_number?: string | null
+          address?: string | null
+          gush?: string | null
+          helka?: string | null
+          parsed_data?: Json
+          sync_status?: string
+          sync_error?: string | null
+          last_sync_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tik_binyan_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -468,4 +528,39 @@ export const CONSENT_STATUS_COLORS: Record<ConsentStatus, string> = {
   unsigned_neutral: '#f59e0b',
   signed:           '#22c55e',
   objecting:        '#ef4444',
+}
+
+// ─── Tik Binyan (Municipal Building File) ────────────────────────────────────
+
+export type TikBinyanSearchType = 'file_number' | 'request_number' | 'address' | 'gush_helka'
+
+export interface TikBinyanParsedData {
+  permit_status: string
+  permit_type: string | null
+  decision_date: string | null
+  applicant: string | null
+  request_description: string | null
+  timeline: { date: string; event: string; details: string | null }[]
+  conditions: string[]
+  raw_summary: string
+  confidence: number
+}
+
+export interface TikBinyanRow {
+  id: string
+  project_id: string
+  municipality: string
+  municipality_url: string | null
+  search_type: string
+  file_number: string | null
+  request_number: string | null
+  address: string | null
+  gush: string | null
+  helka: string | null
+  parsed_data: TikBinyanParsedData | Record<string, never>
+  sync_status: string
+  sync_error: string | null
+  last_sync_at: string | null
+  created_at: string
+  updated_at: string
 }

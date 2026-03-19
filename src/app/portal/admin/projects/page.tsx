@@ -1,37 +1,28 @@
+import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, ArrowLeft } from 'lucide-react'
-import { PROJECT_TYPE_LABELS } from '@/lib/supabase/types'
-
-const STATUS_LABELS: Record<string, string> = {
-  pre_planning:  'טרום תכנון',
-  planning:      'תכנון',
-  permits:       'קבלת היתרים',
-  construction:  'בנייה',
-  finishing:     'גמר',
-  key_delivery:  'מסירת מפתחות',
-}
+import { Plus } from 'lucide-react'
+import { ProjectsTable } from '@/components/portal/admin/ProjectsTable'
 
 export default async function AdminProjectsPage() {
   const supabase = await getSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const admin = getSupabaseAdminClient()
 
-  // Fetch manager names separately (avoid join type issues)
-  const managerIds = (projects ?? [])
-    .map(p => p.project_manager_id)
-    .filter((id): id is string => !!id)
+  // Fetch projects + PM users in parallel
+  const [{ data: projects }, { data: pmUsers }] = await Promise.all([
+    admin.from('projects').select('id, name, project_type, status, project_manager_id').order('created_at', { ascending: false }),
+    admin.from('users').select('id, full_name').eq('role', 'project_manager'),
+  ])
 
+  // Build manager name map
+  const managerIds = (projects ?? []).map(p => p.project_manager_id).filter((id): id is string => !!id)
   const { data: managers } = managerIds.length > 0
-    ? await supabase.from('users').select('id, full_name').in('id', managerIds)
+    ? await admin.from('users').select('id, full_name').in('id', managerIds)
     : { data: [] }
-
-  const managerMap = Object.fromEntries(
-    (managers ?? []).map(m => [m.id, m.full_name])
-  )
+  const managerMap = Object.fromEntries((managers ?? []).map(m => [m.id, m.full_name ?? '']))
 
   return (
     <div className="space-y-6">
@@ -54,48 +45,11 @@ export default async function AdminProjectsPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-card rounded-2xl border border-border overflow-x-auto">
-          <table className="w-full text-base min-w-[480px]">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="text-start p-4 font-semibold">שם פרויקט</th>
-                <th className="text-start p-4 font-semibold">סוג</th>
-                <th className="text-start p-4 font-semibold">סטטוס</th>
-                <th className="text-start p-4 font-semibold">מנהל פרויקט</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map(project => {
-                const managerName = project.project_manager_id
-                  ? managerMap[project.project_manager_id]
-                  : null
-                return (
-                  <tr key={project.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="p-4 font-medium">
-                      <Link href={`/portal/admin/projects/${project.id}`} className="hover:text-primary transition-colors flex items-center gap-1.5 group">
-                        {project.name}
-                        <ArrowLeft size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
-                      </Link>
-                    </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {PROJECT_TYPE_LABELS[project.project_type]}
-                    </td>
-                    <td className="p-4 text-muted-foreground">
-                      {STATUS_LABELS[project.status] ?? project.status}
-                    </td>
-                    <td className="p-4">
-                      {managerName ? (
-                        <span className="text-foreground">{managerName}</span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">לא משויך</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ProjectsTable
+          projects={projects}
+          managerMap={managerMap}
+          projectManagers={pmUsers ?? []}
+        />
       )}
     </div>
   )

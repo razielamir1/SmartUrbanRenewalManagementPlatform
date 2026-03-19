@@ -20,7 +20,10 @@ import {
   type ProjectStatus,
   type ConsentStatus,
   type UserRole,
+  type TikBinyanRow,
+  type TikBinyanParsedData,
 } from '@/lib/supabase/types'
+import { MUNICIPALITY_OPTIONS } from '@/lib/tik-binyan/municipalities'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +58,7 @@ interface Props {
   meetings: Meeting[]
   teamMembers: TeamMember[]
   contacts: Contact[]
+  tikBinyan: TikBinyanRow | null
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -77,13 +81,13 @@ const ROLE_LABELS_HE: Partial<Record<UserRole, string>> = {
   project_manager: 'מנהל פרויקט',
 }
 
-type TabId = 'overview' | 'consents' | 'documents' | 'meetings' | 'team' | 'ai'
+type TabId = 'overview' | 'consents' | 'documents' | 'meetings' | 'team' | 'tik_binyan' | 'ai'
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ProjectDetailClient({
   project, pm, buildings, apartments, milestones,
-  documents, meetings, teamMembers, contacts,
+  documents, meetings, teamMembers, contacts, tikBinyan,
 }: Props) {
   const [activeTab,         setActiveTab]         = useState<TabId>('overview')
   const [localMilestones,   setLocalMilestones]   = useState<Milestone[]>(milestones)
@@ -124,6 +128,7 @@ export function ProjectDetailClient({
     { id: 'documents',  label: 'מסמכים',   icon: FileText,        count: localDocs.length },
     { id: 'meetings',   label: 'פגישות',   icon: CalendarDays,    count: localMeetings.length },
     { id: 'team',       label: 'צוות',     icon: Users,           count: teamMembers.length },
+    { id: 'tik_binyan', label: 'תיק בניין', icon: Building2 },
     { id: 'ai',         label: 'עוזר AI',  icon: Bot },
   ]
 
@@ -408,6 +413,7 @@ export function ProjectDetailClient({
           {activeTab === 'documents' && <DocumentsTab documents={localDocs} projectId={project.id} onUploaded={doc => setLocalDocs(prev => [doc, ...prev])} />}
           {activeTab === 'meetings'  && <MeetingsTab  meetings={localMeetings} projectId={project.id} onCreated={m => setLocalMeetings(prev => [...prev, m])} />}
           {activeTab === 'team'      && <TeamTab      teamMembers={teamMembers} contacts={contacts} buildings={buildings} pm={pm} projectId={project.id} />}
+          {activeTab === 'tik_binyan' && <TikBinyanTab projectId={project.id} initialData={tikBinyan} />}
           {activeTab === 'ai'        && <AIChatTab    project={project} signedPct={signedPct} totalApts={totalApts} />}
         </div>
       </div>
@@ -1175,6 +1181,287 @@ function AptEditModal({ apt, residents, onClose, onSaved }: {
           {saving ? 'שומר...' : 'שמור'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// ─── Tik Binyan Tab ──────────────────────────────────────────────────────────
+
+const SEARCH_TYPE_LABELS: Record<string, string> = {
+  file_number: 'מספר תיק', request_number: 'מספר בקשה',
+  address: 'כתובת', gush_helka: 'גוש/חלקה',
+}
+const SYNC_STATUS_STYLE: Record<string, { label: string; color: string }> = {
+  pending:  { label: 'ממתין',    color: '#6b7280' },
+  syncing:  { label: 'מסנכרן...', color: '#3b82f6' },
+  success:  { label: 'מסונכרן',  color: '#22c55e' },
+  error:    { label: 'שגיאה',    color: '#ef4444' },
+}
+
+function TikBinyanTab({ projectId, initialData }: { projectId: string; initialData: TikBinyanRow | null }) {
+  const [tik, setTik]          = useState(initialData)
+  const [saving, setSaving]    = useState(false)
+  const [syncing, setSyncing]  = useState(false)
+  const [err, setErr]          = useState('')
+
+  // Setup form
+  const [municipality, setMunicipality] = useState(tik?.municipality ?? '')
+  const [searchType, setSearchType]     = useState<string>(tik?.search_type ?? 'file_number')
+  const [fileNumber, setFileNumber]     = useState(tik?.file_number ?? '')
+  const [requestNum, setRequestNum]     = useState(tik?.request_number ?? '')
+  const [address, setAddress]           = useState(tik?.address ?? '')
+  const [gush, setGush]                 = useState(tik?.gush ?? '')
+  const [helka, setHelka]               = useState(tik?.helka ?? '')
+
+  async function handleSave() {
+    if (!municipality) { setErr('יש לבחור עירייה'); return }
+    setSaving(true); setErr('')
+    const res = await fetch('/api/tik-binyan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId, municipality, search_type: searchType,
+        file_number: fileNumber || undefined,
+        request_number: requestNum || undefined,
+        address: address || undefined,
+        gush: gush || undefined, helka: helka || undefined,
+      }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { setErr(data.error ?? 'שגיאה'); return }
+    setTik(data.tikBinyan)
+    // Auto-sync after save
+    triggerSync(data.tikBinyan.id)
+  }
+
+  async function triggerSync(id?: string) {
+    const tikId = id ?? tik?.id
+    if (!tikId) return
+    setSyncing(true); setErr('')
+    const res = await fetch('/api/tik-binyan/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tikBinyanId: tikId }),
+    })
+    const data = await res.json()
+    setSyncing(false)
+    if (!res.ok) { setErr(data.error ?? 'שגיאת סנכרון'); return }
+    // Refresh tik data
+    const refreshRes = await fetch(`/api/tik-binyan?project_id=${projectId}`)
+    const refreshData = await refreshRes.json()
+    if (refreshData.tikBinyan) setTik(refreshData.tikBinyan)
+  }
+
+  const inputClass = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring'
+  const parsed = tik?.parsed_data as TikBinyanParsedData | undefined
+
+  // ─── No tik configured: Setup form ───
+  if (!tik) {
+    return (
+      <div className="space-y-4 max-w-lg">
+        <div>
+          <h3 className="font-bold text-lg mb-1">חיבור תיק בניין עירוני</h3>
+          <p className="text-sm text-muted-foreground">חבר את הפרויקט למערכת תיקי הבניין של העירייה לקבלת עדכונים אוטומטיים</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">עירייה *</label>
+          <select value={municipality} onChange={e => setMunicipality(e.target.value)} className={inputClass} aria-label="בחר עירייה">
+            <option value="">— בחר עירייה —</option>
+            {MUNICIPALITY_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">חיפוש לפי</label>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(SEARCH_TYPE_LABELS).map(([key, label]) => (
+              <button key={key} onClick={() => setSearchType(key)}
+                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${searchType === key ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {searchType === 'file_number' && (
+          <div>
+            <label className="block text-sm font-medium mb-1">מספר תיק</label>
+            <input value={fileNumber} onChange={e => setFileNumber(e.target.value)} className={inputClass} placeholder="לדוגמא: 12345" dir="ltr" aria-label="מספר תיק" />
+          </div>
+        )}
+        {searchType === 'request_number' && (
+          <div>
+            <label className="block text-sm font-medium mb-1">מספר בקשה</label>
+            <input value={requestNum} onChange={e => setRequestNum(e.target.value)} className={inputClass} placeholder="לדוגמא: 2024-001" dir="ltr" aria-label="מספר בקשה" />
+          </div>
+        )}
+        {searchType === 'address' && (
+          <div>
+            <label className="block text-sm font-medium mb-1">כתובת</label>
+            <input value={address} onChange={e => setAddress(e.target.value)} className={inputClass} placeholder="לדוגמא: אבא הלל 96" aria-label="כתובת" />
+          </div>
+        )}
+        {searchType === 'gush_helka' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">גוש</label>
+              <input value={gush} onChange={e => setGush(e.target.value)} className={inputClass} dir="ltr" aria-label="גוש" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">חלקה</label>
+              <input value={helka} onChange={e => setHelka(e.target.value)} className={inputClass} dir="ltr" aria-label="חלקה" />
+            </div>
+          </div>
+        )}
+
+        {err && <p className="text-sm text-destructive">{err}</p>}
+
+        <button onClick={handleSave} disabled={saving}
+          className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-3 font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity">
+          {saving ? 'שומר...' : 'שמור והתחל סנכרון'}
+        </button>
+      </div>
+    )
+  }
+
+  // ─── Tik configured: Show data ───
+  const statusStyle = SYNC_STATUS_STYLE[tik.sync_status] ?? SYNC_STATUS_STYLE.pending
+  const munLabel = MUNICIPALITY_OPTIONS.find(m => m.value === tik.municipality)?.label ?? tik.municipality
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="font-bold text-lg">תיק בניין — {munLabel}</h3>
+          <p className="text-sm text-muted-foreground">
+            {SEARCH_TYPE_LABELS[tik.search_type]}: <strong dir="ltr">{tik.file_number || tik.request_number || tik.address || `${tik.gush}/${tik.helka}`}</strong>
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="px-3 py-1 rounded-full text-xs font-semibold"
+            style={{ background: `${statusStyle.color}15`, color: statusStyle.color, border: `1px solid ${statusStyle.color}40` }}>
+            {statusStyle.label}
+          </span>
+          <button onClick={() => triggerSync()} disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity">
+            {syncing ? 'מסנכרן...' : 'סנכרן עכשיו'}
+          </button>
+        </div>
+      </div>
+
+      {tik.last_sync_at && (
+        <p className="text-xs text-muted-foreground">סנכרון אחרון: {new Date(tik.last_sync_at).toLocaleString('he-IL')}</p>
+      )}
+      {tik.sync_error && (
+        <div className="rounded-xl px-4 py-3 text-sm bg-destructive/10 text-destructive border border-destructive/20">
+          שגיאה: {tik.sync_error}
+        </div>
+      )}
+      {err && <p className="text-sm text-destructive">{err}</p>}
+
+      {/* Parsed data */}
+      {parsed && parsed.permit_status && (
+        <div className="space-y-4">
+          {/* Status + key info */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <InfoCard label="סטטוס" value={parsed.permit_status} />
+            <InfoCard label="סוג היתר" value={parsed.permit_type ?? '—'} />
+            <InfoCard label="מבקש" value={parsed.applicant ?? '—'} />
+            <InfoCard label="תאריך החלטה" value={parsed.decision_date ? new Date(parsed.decision_date).toLocaleDateString('he-IL') : '—'} />
+          </div>
+
+          {parsed.request_description && (
+            <div className="p-4 rounded-2xl bg-muted/30 border border-border">
+              <p className="text-sm font-semibold mb-1">תיאור הבקשה</p>
+              <p className="text-sm text-muted-foreground">{parsed.request_description}</p>
+            </div>
+          )}
+
+          {/* AI Summary */}
+          {parsed.raw_summary && (
+            <div className="p-4 rounded-2xl border border-border" style={{ background: 'rgba(59,130,246,0.05)' }}>
+              <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                <Bot size={16} aria-hidden="true" style={{ color: '#3b82f6' }} />
+                סיכום AI
+                {parsed.confidence !== undefined && (
+                  <span className="text-xs text-muted-foreground">({Math.round(parsed.confidence * 100)}% ביטחון)</span>
+                )}
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">{parsed.raw_summary}</p>
+            </div>
+          )}
+
+          {/* Timeline */}
+          {parsed.timeline && parsed.timeline.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-3">ציר זמן</h4>
+              <div className="space-y-3 relative">
+                <div className="absolute top-2 bottom-2 start-[7px] w-0.5 bg-border" />
+                {parsed.timeline.map((item, i) => (
+                  <div key={i} className="flex gap-4 relative">
+                    <div className="shrink-0 w-4 h-4 rounded-full bg-primary mt-0.5 z-10" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="font-semibold">{item.event}</span>
+                        {item.date && <span className="text-xs text-muted-foreground" dir="ltr">{item.date}</span>}
+                      </div>
+                      {item.details && <p className="text-sm text-muted-foreground mt-0.5">{item.details}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Conditions */}
+          {parsed.conditions && parsed.conditions.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">תנאים</h4>
+              <ul className="space-y-1.5">
+                {parsed.conditions.map((c, i) => (
+                  <li key={i} className="flex gap-2 text-sm">
+                    <span className="shrink-0 text-primary">•</span>
+                    <span>{c}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit config */}
+      <details className="text-sm">
+        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">ערוך הגדרות חיפוש</summary>
+        <div className="mt-3 space-y-3 max-w-lg">
+          <div>
+            <label className="block text-sm font-medium mb-1">עירייה</label>
+            <select value={municipality} onChange={e => setMunicipality(e.target.value)} className={inputClass} aria-label="עירייה">
+              {MUNICIPALITY_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">מספר תיק</label>
+            <input value={fileNumber} onChange={e => setFileNumber(e.target.value)} className={inputClass} dir="ltr" aria-label="מספר תיק" />
+          </div>
+          <button onClick={handleSave} disabled={saving}
+            className="rounded-xl bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-60">
+            {saving ? 'שומר...' : 'עדכן וסנכרן'}
+          </button>
+        </div>
+      </details>
+    </div>
+  )
+}
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="p-3 rounded-xl bg-muted/30 border border-border">
+      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+      <p className="font-semibold text-sm truncate">{value}</p>
     </div>
   )
 }

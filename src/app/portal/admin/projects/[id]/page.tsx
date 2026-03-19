@@ -43,11 +43,14 @@ export default async function ProjectDetailPage({
         .in('building_id', buildingIds)
     : { data: [] }
 
-  // PM user details
+  // PM user details + tik binyan
   const pmId = project.project_manager_id
-  const { data: pm } = pmId
-    ? await admin.from('users').select('full_name').eq('id', pmId).single()
-    : { data: null }
+  const [{ data: pm }, { data: tikBinyan }] = await Promise.all([
+    pmId
+      ? admin.from('users').select('full_name').eq('id', pmId).single()
+      : Promise.resolve({ data: null }),
+    admin.from('tik_binyan').select('*').eq('project_id', id).maybeSingle(),
+  ])
 
   return (
     <ProjectDetailClient
@@ -60,6 +63,7 @@ export default async function ProjectDetailPage({
       meetings={meetings ?? []}
       teamMembers={teamMembers ?? []}
       contacts={contacts ?? []}
+      tikBinyan={tikBinyan as import('@/lib/supabase/types').TikBinyanRow | null}
     />
   )
 }
