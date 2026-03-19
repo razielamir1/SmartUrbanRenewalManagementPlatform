@@ -140,7 +140,7 @@ export function ProjectDetailClient({
           apt={editingApt}
           residents={teamMembers.filter(m => m.role === 'resident')}
           onClose={() => setEditingApt(null)}
-          onSaved={updates => { handleAptSaved(editingApt.id, updates); setEditingApt(null) }}
+          onSaved={updates => { handleAptSaved(editingApt.id, updates) }}
         />
       )}
 
@@ -404,10 +404,10 @@ export function ProjectDetailClient({
         {/* Tab content */}
         <div className="p-6">
           {activeTab === 'overview'  && <OverviewTab apartments={localApts} buildings={buildings} milestones={localMilestones} documents={localDocs} meetings={localMeetings} project={project} onToggleMilestone={toggleMilestone} />}
-          {activeTab === 'consents'  && <ConsentsTab  apartments={localApts} buildings={buildings} project={project} onEditApt={setEditingApt} residents={teamMembers.filter(m => m.role === 'resident')} />}
+          {activeTab === 'consents'  && <ConsentsTab  apartments={localApts} buildings={buildings} project={project} onEditApt={setEditingApt} residents={teamMembers} />}
           {activeTab === 'documents' && <DocumentsTab documents={localDocs} projectId={project.id} onUploaded={doc => setLocalDocs(prev => [doc, ...prev])} />}
           {activeTab === 'meetings'  && <MeetingsTab  meetings={localMeetings} projectId={project.id} onCreated={m => setLocalMeetings(prev => [...prev, m])} />}
-          {activeTab === 'team'      && <TeamTab      teamMembers={teamMembers} contacts={contacts} buildings={buildings} pm={pm} />}
+          {activeTab === 'team'      && <TeamTab      teamMembers={teamMembers} contacts={contacts} buildings={buildings} pm={pm} projectId={project.id} />}
           {activeTab === 'ai'        && <AIChatTab    project={project} signedPct={signedPct} totalApts={totalApts} />}
         </div>
       </div>
@@ -895,13 +895,62 @@ function MeetingsTab({ meetings, projectId, onCreated }: {
 
 // ─── Team Tab ─────────────────────────────────────────────────────────────────
 
-function TeamTab({ teamMembers, contacts, buildings, pm }: {
+function TeamTab({ teamMembers, contacts: initialContacts, buildings, pm, projectId }: {
   teamMembers: TeamMember[]
   contacts: Contact[]
   buildings: Building[]
   pm: { full_name: string | null } | null
+  projectId: string
 }) {
   const buildingMap = Object.fromEntries(buildings.map(b => [b.id, b.address]))
+  const [contacts,       setContacts]       = useState<Contact[]>(initialContacts)
+  const [importText,     setImportText]     = useState('')
+  const [showImport,     setShowImport]     = useState(false)
+  const [parsed,         setParsed]         = useState<{ full_name: string; phone_raw: string; phone_wa: string }[]>([])
+  const [saving,         setSaving]         = useState(false)
+  const [waGroupLink,    setWaGroupLink]    = useState('')
+  const [waMsg,          setWaMsg]          = useState('שלום, אתם מוזמנים להצטרף למערכת UrbanOS לניהול הפרויקט שלנו.')
+
+  function parseText() {
+    const IL_PHONE_RE = /0[5-9]\d[-\s]?\d{3}[-\s]?\d{4}/g
+    const lines = importText.split(/\r?\n/)
+    const result: { full_name: string; phone_raw: string; phone_wa: string }[] = []
+    for (const line of lines) {
+      const t = line.trim(); if (!t) continue
+      const phones = t.match(IL_PHONE_RE); if (!phones) continue
+      const firstIdx = t.search(IL_PHONE_RE)
+      const name = t.slice(0, firstIdx).replace(/^[\d\s.,;:\-–—|/\\()[\]{}]+/, '').trim()
+      for (const phone of phones) {
+        const digits = phone.replace(/[-\s]/g, '')
+        result.push({ full_name: name || 'לא ידוע', phone_raw: phone, phone_wa: '972' + digits.slice(1) })
+      }
+    }
+    setParsed(result)
+  }
+
+  async function saveContacts() {
+    if (parsed.length === 0) return
+    setSaving(true)
+    const res = await fetch('/api/contacts/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId, contacts: parsed.map(c => ({ ...c, building_id: null })) }),
+    })
+    if (res.ok) {
+      setContacts(prev => [
+        ...prev,
+        ...parsed.map((c, i) => ({ id: `new-${i}-${Date.now()}`, full_name: c.full_name, phone_raw: c.phone_raw })),
+      ])
+      setImportText(''); setParsed([]); setShowImport(false)
+    }
+    setSaving(false)
+  }
+
+  function waLink(phoneWa: string) {
+    let text = waMsg
+    if (waGroupLink.trim()) text += `\n\nהצטרפות לקבוצת ווצאפ: ${waGroupLink.trim()}`
+    return `https://wa.me/${phoneWa}?text=${encodeURIComponent(text)}`
+  }
 
   return (
     <div className="space-y-6">
@@ -931,30 +980,90 @@ function TeamTab({ teamMembers, contacts, buildings, pm }: {
         </div>
       )}
 
-      {/* Contacts */}
-      {contacts.length > 0 && (
-        <div>
-          <h3 className="font-bold mb-3">אנשי קשר ({contacts.length})</h3>
-          <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
-            {contacts.slice(0, 20).map(c => (
-              <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium">{c.full_name}</span>
-                <a href={`tel:${c.phone_raw}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
-                  <Phone size={13} aria-hidden="true" />
-                  <span dir="ltr">{c.phone_raw}</span>
-                </a>
+      {/* Contacts with WhatsApp */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold">אנשי קשר ({contacts.length})</h3>
+          <button onClick={() => setShowImport(s => !s)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90">
+            <Plus size={14} aria-hidden="true" />
+            ייבוא אנשי קשר
+          </button>
+        </div>
+
+        {/* WhatsApp settings */}
+        {contacts.length > 0 && (
+          <div className="mb-3 p-4 rounded-xl bg-muted/30 border border-border space-y-2">
+            <p className="text-sm font-semibold">🟢 הגדרות ווצאפ לשליחה</p>
+            <textarea value={waMsg} onChange={e => setWaMsg(e.target.value)} rows={2}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="הודעת הזמנה..." aria-label="הודעת ווצאפ" />
+            <input value={waGroupLink} onChange={e => setWaGroupLink(e.target.value)}
+              placeholder="קישור לקבוצת ווצאפ (אופציונלי)"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              aria-label="קישור קבוצת ווצאפ" />
+          </div>
+        )}
+
+        {/* Import form */}
+        {showImport && (
+          <div className="mb-4 p-4 rounded-2xl border border-border bg-muted/20 space-y-3">
+            <p className="text-sm font-semibold">הכנס רשימת שמות ומספרי טלפון (שם + מספר בכל שורה):</p>
+            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={6}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder={'ישראל ישראלי 050-1234567\nרחל כהן 052-9876543'}
+              aria-label="רשימת אנשי קשר" />
+            <div className="flex gap-2">
+              <button onClick={parseText} className="flex-1 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">נתח רשימה</button>
+              <button onClick={() => { setShowImport(false); setParsed([]) }} className="px-3 py-2 rounded-lg text-sm hover:bg-muted">ביטול</button>
+            </div>
+            {parsed.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">נמצאו {parsed.length} אנשי קשר:</p>
+                <div className="max-h-40 overflow-y-auto divide-y divide-border border border-border rounded-lg">
+                  {parsed.map((c, i) => (
+                    <div key={i} className="px-3 py-2 flex justify-between text-sm">
+                      <span>{c.full_name}</span>
+                      <span dir="ltr" className="text-muted-foreground">{c.phone_raw}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={saveContacts} disabled={saving}
+                  className="w-full rounded-lg bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-60">
+                  {saving ? 'שומר...' : `שמור ${parsed.length} אנשי קשר`}
+                </button>
               </div>
-            ))}
-            {contacts.length > 20 && (
-              <div className="px-4 py-3 text-sm text-muted-foreground">ועוד {contacts.length - 20} אנשי קשר נוספים</div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {teamMembers.length === 0 && contacts.length === 0 && (
-        <p className="text-muted-foreground">לא שויכו עדיין חברי צוות לפרויקט</p>
-      )}
+        {contacts.length > 0 && (
+          <div className="divide-y divide-border border border-border rounded-2xl overflow-hidden">
+            {contacts.map(c => (
+              <div key={c.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
+                <span className="font-medium">{c.full_name}</span>
+                <div className="flex items-center gap-3">
+                  <a href={`tel:${c.phone_raw}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+                    <Phone size={13} aria-hidden="true" />
+                    <span dir="ltr">{c.phone_raw}</span>
+                  </a>
+                  <a href={waLink('972' + (c.phone_raw ?? '').replace(/[-\s]/g, '').slice(1))}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors"
+                    style={{ background: 'rgba(37,211,102,0.12)', color: '#25d366' }}
+                    aria-label={`שלח ווצאפ ל-${c.full_name}`}>
+                    💬 שלח
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {contacts.length === 0 && !showImport && teamMembers.length === 0 && (
+          <p className="text-muted-foreground">לא שויכו עדיין חברי צוות לפרויקט</p>
+        )}
+      </div>
     </div>
   )
 }

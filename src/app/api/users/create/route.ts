@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     email,
     password,
     email_confirm: true,
-    app_metadata: { role },
+    app_metadata: { role, must_change_password: true },
     user_metadata: { full_name: full_name ?? '' },
   })
 

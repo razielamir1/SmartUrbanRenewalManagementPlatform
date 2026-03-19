@@ -53,6 +53,17 @@ export async function middleware(request: NextRequest) {
     }
 
     if (role) {
+      // ── First login: force password change ─────────────────
+      if (
+        user.app_metadata?.must_change_password === true &&
+        pathname.startsWith('/portal') &&
+        pathname !== '/portal/change-password'
+      ) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/portal/change-password'
+        return NextResponse.redirect(url)
+      }
+
       // ── Logged-in user hitting /login → redirect to portal ─
       if (pathname === '/login') {
         const url = request.nextUrl.clone()
@@ -82,5 +93,6 @@ export const config = {
     '/portal/:path*',
     '/login',
     '/onboarding',
+    '/portal/change-password',
   ],
 }

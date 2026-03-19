@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, Link2, X } from 'lucide-react'
+import { Search, Link2, X, Pencil, Eye, EyeOff } from 'lucide-react'
 import type { UserRole } from '@/lib/supabase/types'
 import type { UserWithRelations } from './page'
 
@@ -25,6 +25,98 @@ interface Props {
   projects: Project[]
 }
 
+// ─── User Edit Modal ──────────────────────────────────────────────────────────
+
+function UserEditModal({ user, onClose, onSaved }: {
+  user: UserWithRelations
+  onClose: () => void
+  onSaved: (msg: string) => void
+}) {
+  const [fullName,    setFullName]    = useState(user.full_name ?? '')
+  const [email,       setEmail]       = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [showPw,      setShowPw]      = useState(false)
+  const [loading,     setLoading]     = useState(true)
+  const [saving,      setSaving]      = useState(false)
+  const [err,         setErr]         = useState('')
+
+  // Load email from auth on mount
+  useState(() => {
+    fetch(`/api/users/${user.id}`)
+      .then(r => r.json())
+      .then(d => { setEmail(d.email ?? ''); setLoading(false) })
+      .catch(() => setLoading(false))
+  })
+
+  async function handleSave() {
+    setSaving(true); setErr('')
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: fullName,
+        email: email || undefined,
+        new_password: newPassword || undefined,
+      }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { setErr(data.error ?? 'שגיאה'); return }
+    onSaved('פרטי המשתמש עודכנו בהצלחה')
+  }
+
+  const inputClass = 'w-full rounded-lg border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-lg">עריכת משתמש</h3>
+          <button onClick={onClose} aria-label="סגור" className="p-1 rounded-lg hover:bg-muted"><X size={18} /></button>
+        </div>
+
+        {loading ? <p className="text-sm text-muted-foreground">טוען...</p> : (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-1">שם מלא</label>
+              <input value={fullName} onChange={e => setFullName(e.target.value)} className={inputClass} aria-label="שם מלא" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">אימייל (שם משתמש)</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} type="email" className={inputClass} aria-label="אימייל" dir="ltr" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">סיסמא חדשה (השאר ריק לאי-שינוי)</label>
+              <div className="relative">
+                <input value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                  type={showPw ? 'text' : 'password'}
+                  className={`${inputClass} pe-10`}
+                  placeholder="לפחות 8 תווים"
+                  aria-label="סיסמא חדשה"
+                  dir="ltr"
+                />
+                <button type="button" onClick={() => setShowPw(s => !s)}
+                  aria-label={showPw ? 'הסתר סיסמא' : 'הצג סיסמא'}
+                  className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground hover:text-foreground">
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {err && <p className="text-sm text-destructive">{err}</p>}
+
+        <button onClick={handleSave} disabled={saving || loading}
+          className="w-full rounded-xl bg-primary text-primary-foreground px-4 py-2.5 font-semibold hover:opacity-90 disabled:opacity-60">
+          {saving ? 'שומר...' : 'שמור שינויים'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface AssignState {
   projectId: string
   buildingId: string
@@ -38,7 +130,8 @@ export function UserRoleManager({ users, projects }: Props) {
   const [message,       setMessage]       = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [search,        setSearch]        = useState('')
   const [projectFilter, setProjectFilter] = useState('')
-  const [assigning,     setAssigning]     = useState<string | null>(null)   // userId being assigned
+  const [assigning,     setAssigning]     = useState<string | null>(null)
+  const [editingUser,   setEditingUser]   = useState<UserWithRelations | null>(null)
   const [assignState,   setAssignState]   = useState<AssignState>({
     projectId: '', buildingId: '', buildings: [], loading: false, saving: false,
   })
@@ -167,6 +260,15 @@ export function UserRoleManager({ users, projects }: Props) {
         </div>
       )}
 
+      {/* User edit modal */}
+      {editingUser && (
+        <UserEditModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={msg => { setMessage({ type: 'success', text: msg }); setEditingUser(null) }}
+        />
+      )}
+
       {/* Assignment modal */}
       {assigning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={e => { if (e.target === e.currentTarget) setAssigning(null) }}>
@@ -232,7 +334,7 @@ export function UserRoleManager({ users, projects }: Props) {
                 <th className="text-start p-4 font-semibold whitespace-nowrap">בניין</th>
                 <th className="text-start p-4 font-semibold whitespace-nowrap">תפקיד נוכחי</th>
                 <th className="text-start p-4 font-semibold whitespace-nowrap">שינוי תפקיד</th>
-                <th className="text-start p-4 font-semibold whitespace-nowrap">שיוך</th>
+                <th className="text-start p-4 font-semibold whitespace-nowrap">פעולות</th>
               </tr>
             </thead>
             <tbody>
@@ -270,14 +372,24 @@ export function UserRoleManager({ users, projects }: Props) {
                       )}
                     </td>
                     <td className="p-4">
-                      <button
-                        onClick={() => openAssign(user)}
-                        aria-label={`שייך ${user.full_name} לפרויקט`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm transition-colors"
-                      >
-                        <Link2 size={14} aria-hidden="true" />
-                        שייך
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openAssign(user)}
+                          aria-label={`שייך ${user.full_name} לפרויקט`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm transition-colors"
+                        >
+                          <Link2 size={14} aria-hidden="true" />
+                          שייך
+                        </button>
+                        <button
+                          onClick={() => setEditingUser(user)}
+                          aria-label={`ערוך ${user.full_name}`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm transition-colors"
+                        >
+                          <Pencil size={14} aria-hidden="true" />
+                          ערוך
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
