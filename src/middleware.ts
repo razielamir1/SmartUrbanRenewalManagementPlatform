@@ -72,7 +72,11 @@ export async function middleware(request: NextRequest) {
       }
 
       // ── Wrong portal → redirect to correct one ─────────────
-      if (pathname.startsWith('/portal')) {
+      // Admin with "viewAs" cookie can access any portal
+      const viewAs = request.cookies.get('viewAs')?.value
+      const isAdminViewAs = role === 'admin' && viewAs
+
+      if (pathname.startsWith('/portal') && !isAdminViewAs) {
         const matchedPrefix = Object.keys(PORTAL_ROLE_MAP).find((p) =>
           pathname.startsWith(p)
         )

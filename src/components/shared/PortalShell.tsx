@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, Sun, Moon } from 'lucide-react'
 import { SideNav } from './SideNav'
+import { ViewAsBar } from './ViewAsBar'
 import type { UserRole } from '@/lib/supabase/types'
 
 interface Props {
@@ -50,7 +51,12 @@ export function PortalShell({ role, userName, children }: Props) {
   }
 
   return (
-    <div ref={portalRef} className="flex min-h-screen bg-background">
+    <div ref={portalRef} className="flex flex-col min-h-screen bg-background">
+
+      {/* View As bar (admin only) */}
+      <ViewAsBar actualRole={role} />
+
+      <div className="flex flex-1">
 
       {/* Backdrop */}
       {isOpen && (
@@ -104,6 +110,7 @@ export function PortalShell({ role, userName, children }: Props) {
         <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
+      </div>
       </div>
     </div>
   )
